@@ -1,0 +1,13 @@
+{
+  "name": "Blog Carousel Studio",
+  "description": "GTM Buddy internal tool to turn blog content into branded LinkedIn carousel posts with PDF export",
+  "entitiesDir": "./entities",
+  "functionsDir": "./functions",
+  "agentsDir": "./agents",
+  "site": {
+    "installCommand": "npm install",
+    "buildCommand": "npm run build",
+    "serveCommand": "npm run dev",
+    "outputDirectory": "./dist"
+  }
+}

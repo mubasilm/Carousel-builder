@@ -1,0 +1,43 @@
+@import "./lib/design-tokens/gtm-buddy.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--font-body);
+    background: var(--page-bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-lg bg-cta px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-cta-hover disabled:opacity-50;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-lg border border-border-strong bg-surface px-5 py-2.5 text-sm font-medium text-text transition hover:bg-page-soft disabled:opacity-50;
+  }
+
+  .input-field {
+    @apply w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-text placeholder:text-muted-light focus:border-green-accent focus:outline-none focus:ring-2 focus:ring-green-accent/20;
+  }
+
+  .card-panel {
+    @apply rounded-xl border border-border bg-surface p-6 shadow-card;
+  }
+}

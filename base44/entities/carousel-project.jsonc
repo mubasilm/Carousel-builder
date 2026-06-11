@@ -1,0 +1,68 @@
+{
+  "name": "CarouselProject",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Project name"
+    },
+    "source_type": {
+      "type": "string",
+      "enum": ["url", "paste"],
+      "description": "How the blog content was provided"
+    },
+    "source_url": {
+      "type": "string",
+      "description": "Blog URL if source_type is url"
+    },
+    "source_text": {
+      "type": "string",
+      "description": "Raw blog content"
+    },
+    "slides": {
+      "type": "array",
+      "description": "Carousel slide content",
+      "items": {
+        "type": "object",
+        "properties": {
+          "index": { "type": "number" },
+          "type": {
+            "type": "string",
+            "enum": ["hook", "problem", "insight", "takeaway", "cta"]
+          },
+          "headline": { "type": "string" },
+          "body": { "type": "string" },
+          "footnote": { "type": "string" },
+          "cta": { "type": "string" }
+        }
+      }
+    },
+    "linkedin_caption": {
+      "type": "string",
+      "description": "Accompanying LinkedIn post copy"
+    },
+    "hashtags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Suggested hashtags"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "ready", "exported"],
+      "default": "draft",
+      "description": "Workflow state"
+    },
+    "reference_urls": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Figma frame or reference image URLs (phase 2)"
+    }
+  },
+  "required": ["title", "source_type"],
+  "rls": {
+    "create": { "user_condition": { "id": "{{user.id}}" } },
+    "read": { "created_by": "{{user.email}}" },
+    "update": { "created_by": "{{user.email}}" },
+    "delete": { "created_by": "{{user.email}}" }
+  }
+}

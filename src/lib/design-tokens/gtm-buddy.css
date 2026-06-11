@@ -1,0 +1,49 @@
+/* GTM Buddy design tokens — vendored from design-engg / GTMDE */
+
+:root {
+  --font-heading: "Geist", "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+
+  --page-bg: #f8f6ed;
+  --page-bg-soft: #fbfaf4;
+  --surface: #ffffff;
+  --surface-warm: #fcfbf6;
+  --surface-muted: #faf9f2;
+  --border: #e8e3d8;
+  --border-strong: #d9d4ca;
+
+  --text: #111411;
+  --text-soft: #30342f;
+  --muted: #666b62;
+  --muted-light: #8b9088;
+
+  --green-950: #003013;
+  --green-800: #064f2a;
+  --green-700: #08703c;
+  --green-accent: #18a957;
+  --green-soft: #effeee;
+  --green-band: #e3efdc;
+
+  --cta: #00692b;
+  --cta-hover: #005a24;
+
+  --pastel-lavender: #edeaff;
+  --pastel-blush: #fbefef;
+  --pastel-aqua: #e4faff;
+  --pastel-butter: #fff9e4;
+  --pastel-mint: #effeee;
+
+  --shadow-soft: 0 18px 50px rgba(38, 45, 35, 0.08);
+  --shadow-card: 0 8px 28px rgba(38, 45, 35, 0.06);
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+
+  /* LinkedIn carousel canvas */
+  --slide-size: 1080px;
+  --slide-padding: 80px;
+  --slide-headline: 64px;
+  --slide-body: 32px;
+  --slide-eyebrow: 12px;
+}

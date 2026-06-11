@@ -1,0 +1,4 @@
+{
+  "name": "fetch-blog-content",
+  "entry": "index.ts"
+}
