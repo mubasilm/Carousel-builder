@@ -3,15 +3,22 @@ import { fetchLocalLlmStatus } from "@/lib/llm-status";
 import { getSetupStatus } from "@/lib/setup-check";
 
 export default function GenerationStatus() {
-  const { isReady: base44Ready } = getSetupStatus();
-  const [llm, setLlm] = useState({ available: false, loading: true });
+  const { isReady: base44Ready, isHosted } = getSetupStatus();
+  const [llm, setLlm] = useState({ available: false, loading: !isHosted });
 
   useEffect(() => {
+    if (isHosted) return;
     fetchLocalLlmStatus().then((status) => setLlm({ ...status, loading: false }));
-  }, []);
+  }, [isHosted]);
 
   const modes = [];
-  if (base44Ready) modes.push({ label: "Base44 AI", active: true, detail: "InvokeLLM via deployed functions" });
+  if (base44Ready) {
+    modes.push({
+      label: isHosted ? "Base44 AI (hosted)" : "Base44 AI",
+      active: true,
+      detail: "generate-carousel-slides function → InvokeLLM fallback → skill engine",
+    });
+  }
   if (llm.available) {
     modes.push({
       label: llm.provider === "anthropic" ? `Claude (${llm.model})` : "OpenAI",
@@ -23,7 +30,7 @@ export default function GenerationStatus() {
     modes.push({
       label: "Skill engine only",
       active: true,
-      detail: "Heuristic — not full AI. Add ANTHROPIC_API_KEY to .env.local",
+      detail: "Heuristic draft — add ANTHROPIC_API_KEY locally or open in Base44 for full AI",
     });
   }
 
@@ -46,13 +53,9 @@ export default function GenerationStatus() {
           </li>
         ))}
       </ul>
-      {!llm.loading && !llm.available && !base44Ready && (
+      {!isHosted && !llm.loading && !llm.available && !base44Ready && (
         <pre className="mt-3 overflow-x-auto rounded bg-white p-2 text-xs text-text-soft">
-{`# Create ~/Projects/blog-carousel-studio/.env.local
-ANTHROPIC_API_KEY=sk-ant-api03-...
-# optional: ANTHROPIC_MODEL=claude-sonnet-4-20250514
-
-# Then restart: npm run dev`}
+{`ANTHROPIC_API_KEY=sk-ant-...  # in .env.local, then npm run dev`}
         </pre>
       )}
     </div>

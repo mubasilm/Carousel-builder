@@ -107,8 +107,10 @@ export default function Home() {
         blogText = fetched.body;
         title = fetched.title || title;
         setSourceText(blogText);
-      } else if (!blogText.trim()) {
-        throw new Error("Please paste the blog content");
+      }
+
+      if (!blogText.trim() || blogText.trim().length < 100) {
+        throw new Error("Please paste at least 100 characters of blog content");
       }
 
       const generated = await generateCarouselSlides({
@@ -117,6 +119,10 @@ export default function Home() {
         referenceUrls: referenceUrls.filter(Boolean),
       });
       const nextSlides = normalizeSlides(generated.slides);
+
+      if (!nextSlides.length) {
+        throw new Error("Generation produced no slides. Paste more blog content or deploy Base44 functions.");
+      }
 
       setSlides(nextSlides);
       setLinkedinCaption(generated.linkedin_caption || "");

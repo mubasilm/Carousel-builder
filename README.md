@@ -233,6 +233,7 @@ npx base44 deploy
 
 4. In Base44 dashboard: set **internal auth** (invite-only or `@gtmbuddy.ai` domain).
 5. On Base44, `generate-carousel-slides` uses **Base44 InvokeLLM** (platform AI — no Anthropic key needed in production).
+6. After GitHub sync, click **Rebuild** or run `npx base44 deploy` so the preview uses the latest code (5-step wizard, not the old 4-step boilerplate).
 
 Configure internal access in the Base44 dashboard (invite-only or email domain allowlist for `@gtmbuddy.ai`).
 

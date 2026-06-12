@@ -1,9 +1,9 @@
 import { getSetupErrorMessage, getSetupStatus } from "@/lib/setup-check";
 
 export default function SetupBanner() {
-  const { isReady, missing, localLlmHint } = getSetupStatus();
+  const { isReady, missing, localLlmHint, isHosted } = getSetupStatus();
 
-  if (isReady) return null;
+  if (isReady || isHosted) return null;
 
   return (
     <div className="border-b border-amber-200 bg-amber-50 px-6 py-4">

@@ -1,17 +1,20 @@
-import { appParams } from "@/lib/app-params";
+import { appParams, isBase44Hosted } from "@/lib/app-params";
 
 export function getSetupStatus() {
   const missing = [];
+  const hosted = isBase44Hosted();
 
   if (!appParams.appId) {
-    missing.push("VITE_BASE44_APP_ID");
+    missing.push(hosted ? "app_id (from Base44 URL)" : "VITE_BASE44_APP_ID");
   }
-  if (!appParams.appBaseUrl) {
+
+  if (!appParams.appBaseUrl && !hosted) {
     missing.push("VITE_BASE44_APP_BASE_URL");
   }
 
   return {
-    isReady: missing.length === 0,
+    isReady: Boolean(appParams.appId),
+    isHosted: hosted,
     missing,
     appId: appParams.appId,
     appBaseUrl: appParams.appBaseUrl,
@@ -33,5 +36,13 @@ export function getGenerationModeLabel(source) {
 }
 
 export function getSetupErrorMessage(missing) {
+  if (isBase44Hosted()) {
+    return "Base44 app ID not detected. Open this app from the Base44 editor or published app URL.";
+  }
   return `Missing Base44 config: ${missing.join(", ")}. Create .env.local from .env.example with values from your Base44 app dashboard, then restart the dev server.`;
+}
+
+export function canUseLocalLlm() {
+  return import.meta.env.DEV && typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
 }
