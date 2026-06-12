@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import CarouselPreview from "./CarouselPreview";
 import CarouselSlide from "./CarouselSlide";
 import { exportSlidesToPdf, exportSlidesToPngZip, validateSlidesBeforeExport } from "@/lib/export-carousel";
 
@@ -53,13 +54,29 @@ export default function CarouselExportPanel({
 
   return (
     <div className="space-y-6">
+      <div>
+        <h2 className="text-lg font-semibold text-text">Final carousel preview</h2>
+        <p className="mt-1 text-sm text-muted">Review every slide before downloading. This matches your PDF and PNG export.</p>
+      </div>
+
+      <CarouselPreview
+        slides={slides}
+        themeId={themeId}
+        visualArchetype={visualArchetype}
+        logoPlacement={logoPlacement}
+        ctaSentence={ctaSentence}
+        ctaButton={ctaButton}
+        readOnly
+        centered
+      />
+
       <div className="card-panel">
-        <h3 className="text-lg font-semibold text-text">Export carousel</h3>
-        <p className="mt-2 text-sm text-muted">
-          Download a multi-page PDF (1200×1200 per slide) or a ZIP of individual PNG files, ready for LinkedIn.
+        <h3 className="text-base font-semibold text-text">Download</h3>
+        <p className="mt-1 text-sm text-muted">
+          Multi-page PDF (1200×1200 per slide) or ZIP of individual PNG files for LinkedIn.
         </p>
 
-        <div className="mt-6 flex flex-wrap gap-3">
+        <div className="mt-4 flex flex-wrap gap-3">
           <button type="button" className="btn-primary" onClick={handlePdf} disabled={exporting || !slides.length}>
             {exporting ? "Exporting..." : "Download PDF"}
           </button>
@@ -73,22 +90,6 @@ export default function CarouselExportPanel({
           <ul className="mt-3 space-y-1 text-sm text-amber-800">
             {warnings.map((w) => (
               <li key={w}>{w}</li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <div className="card-panel border-dashed bg-page-soft">
-        <p className="text-sm font-medium text-muted">Design inspiration</p>
-        <p className="mt-1 text-sm text-muted-light">
-          Reference links from Input step inform theme and layout direction.
-        </p>
-        {project.reference_urls?.length > 0 && (
-          <ul className="mt-3 space-y-1 text-sm text-muted">
-            {project.reference_urls.map((url, i) => (
-              <li key={i} className="truncate">
-                {url}
-              </li>
             ))}
           </ul>
         )}

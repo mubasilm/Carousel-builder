@@ -1,6 +1,7 @@
 import { normalizeSlides } from "@/lib/carousel-schema";
 import {
   archetypeToTheme,
+  assignSlideLayouts,
   buildExternalDesignPrompt,
   buildInAppDesignPrompt,
   inferArchetype,
@@ -15,7 +16,7 @@ export function generateCarouselLocally({ blogText, title, referenceUrls = [], t
   const refHints = mapDesignReferences({ referenceUrls, blogText, title });
   const visualArchetype = refHints.visualArchetype || inferArchetype(blogText);
   const designTheme = refHints.designTheme || archetypeToTheme(visualArchetype);
-  const slides = enforceSlidesBudget(normalizeSlides(synthesized.slides));
+  const slides = enforceSlidesBudget(assignSlideLayouts(normalizeSlides(synthesized.slides), visualArchetype));
 
   const promptBase = {
     title: synthesized.title,

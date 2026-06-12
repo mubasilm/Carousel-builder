@@ -151,10 +151,28 @@ function pickInsightBlocks(paras, count) {
 const VISUAL_BY_TYPE = {
   hook: "Dark forest green cover (#003013), oversized white headline, minimal mark bottom-left",
   problem: "Warm ivory (#f8f6ed), single contrast callout block, left accent bar",
-  insight: "Structured diagram or numbered list, pastel workflow module",
   takeaway: "Editorial memo layout, bold closing line, generous whitespace",
   cta: "Split footer: value sentence left, green CTA button right (#00692B)",
 };
+
+function pickInsightVisual(sourceType, block = "") {
+  const text = block.toLowerCase();
+  if (sourceType === "competitive" || /vs\.|versus|compare|old way|new way/.test(text)) {
+    return "Two-column contrast panels: old model vs Revenue Activation wedge";
+  }
+  if (sourceType === "framework" || /step|framework|lever|process|ladder|checklist/.test(text)) {
+    return "Numbered diagram strip with pastel workflow modules and green accent rail";
+  }
+  if (sourceType === "technical" || /architecture|system|signal|pipeline|orchestrat/.test(text)) {
+    return "Node-and-flow diagram strip with layered system labels";
+  }
+  return "Pastel insight card with structured bullets and left accent bar";
+}
+
+function pickProblemVisual(sourceType) {
+  if (sourceType === "competitive") return "Framed contrast block with split-column tension";
+  return VISUAL_BY_TYPE.problem;
+}
 
 export function synthesizeCarouselFromBlog({ blogText, title, targetSlideCount }) {
   const clean = blogText.trim();
@@ -191,7 +209,7 @@ export function synthesizeCarouselFromBlog({ blogText, title, targetSlideCount }
       body: bodyFromIdeas(bullets.length > 1 ? bullets : [polishCopy(block, { maxWords: 35 })]),
       closing_line: "",
       footer: "",
-      visual: VISUAL_BY_TYPE.insight,
+      visual: pickInsightVisual(sourceType, block),
       cta: "",
     };
   });
@@ -217,7 +235,7 @@ export function synthesizeCarouselFromBlog({ blogText, title, targetSlideCount }
       body: problemBody,
       closing_line: "",
       footer: "",
-      visual: VISUAL_BY_TYPE.problem,
+      visual: pickProblemVisual(sourceType),
       cta: "",
     },
     ...insightSlides,

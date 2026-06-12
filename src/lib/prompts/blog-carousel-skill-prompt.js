@@ -45,6 +45,7 @@ Each slide: one idea. Fields required:
 - closing_line: optional callout line
 - footer: optional footer text
 - visual: visual direction for this slide (diagram type, layout note)
+- layout: in-app renderer layout — cover-dark-green | editorial-card | bullet-list | two-column | diagram-strip | cta-split
 - type: hook | problem | insight | takeaway | cta
 
 ## Visual archetype (pick ONE for the whole carousel)
@@ -109,6 +110,10 @@ export const BLOG_CAROUSEL_JSON_SCHEMA = {
           closing_line: { type: "string" },
           footer: { type: "string" },
           visual: { type: "string" },
+          layout: {
+            type: "string",
+            enum: ["cover-dark-green", "editorial-card", "bullet-list", "two-column", "diagram-strip", "cta-split"],
+          },
           footnote: { type: "string" },
           cta: { type: "string" },
         },

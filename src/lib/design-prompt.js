@@ -1,4 +1,5 @@
 import { getTheme } from "@/lib/design-themes";
+import { resolveSlideLayout } from "@/lib/slide-layout";
 import { IN_APP_RENDERER_SPEC } from "@/lib/prompts/design-skills-prompt";
 import { SLIDE_PAD_PERCENT, SLIDE_SIZE } from "@/lib/slide-constants";
 
@@ -8,6 +9,17 @@ export const ARCHETYPE_LABELS = {
   comparison_brief: "Comparison brief — two-column contrasts, matrices, wedges",
   signal_architecture: "Signal / architecture — nodes, orchestration, layered systems",
 };
+
+export const LAYOUT_LABELS = {
+  "cover-dark-green": "Dark hook cover",
+  "editorial-card": "Editorial card",
+  "bullet-list": "Bullet list",
+  "two-column": "Two-column contrast",
+  "diagram-strip": "Diagram strip",
+  "cta-split": "CTA split footer",
+};
+
+const VALID_LAYOUTS = Object.keys(LAYOUT_LABELS);
 
 const ARCHETYPE_TO_THEME = {
   editorial_memo: "editorial",
@@ -26,6 +38,16 @@ export function inferArchetype(blogText = "") {
   if (/architecture|orchestrat|signal|pipeline|system|agent/.test(t)) return "signal_architecture";
   if (/framework|step|model|checklist|process|ladder/.test(t)) return "structured_diagram";
   return "editorial_memo";
+}
+
+/** Assign renderer layout keys to each slide (consumed by CarouselSlide via resolveSlideLayout). */
+export function assignSlideLayouts(slides = [], visualArchetype = "editorial_memo") {
+  return slides.map((slide) => {
+    const layout = VALID_LAYOUTS.includes(slide.layout)
+      ? slide.layout
+      : resolveSlideLayout(slide, visualArchetype);
+    return { ...slide, layout };
+  });
 }
 
 /**
@@ -128,20 +150,10 @@ export function buildInAppDesignPrompt({
   ctaButton = "",
 }) {
   const theme = getTheme(themeId);
-  const slideSpecs = slides
+  const slidesWithLayouts = assignSlideLayouts(slides, visualArchetype);
+  const slideSpecs = slidesWithLayouts
     .map((s, i) => {
-      const layout =
-        s.type === "hook"
-          ? "cover-dark-green"
-          : s.type === "cta"
-            ? "cta-split"
-            : s.body?.includes("•")
-              ? "bullet-list"
-              : visualArchetype === "comparison_brief"
-                ? "two-column"
-                : visualArchetype === "structured_diagram"
-                  ? "diagram-strip"
-                  : "editorial-card";
+      const layout = s.layout || resolveSlideLayout(s, visualArchetype);
 
       return `Slide ${i + 1} [${s.type}]
 layout: ${layout}

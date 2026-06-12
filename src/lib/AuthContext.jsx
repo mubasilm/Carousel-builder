@@ -5,12 +5,35 @@ import { createAxiosClient } from "@base44/sdk/dist/utils/axios-client";
 
 const AuthContext = createContext(null);
 
+const DEFAULT_AUTH_CONFIG = {
+  enable_google_login: true,
+  enable_sso_login: true,
+  sso_provider_name: "Company SSO",
+};
+
+async function fetchPublicAuthConfig() {
+  if (!appParams.appId) return DEFAULT_AUTH_CONFIG;
+  try {
+    const appClient = createAxiosClient({
+      baseURL: "/api/apps/public",
+      headers: { "X-App-Id": appParams.appId },
+      token: appParams.token,
+      interceptResponses: true,
+    });
+    const res = await appClient.get(`/prod/public-settings/by-id/${appParams.appId}`);
+    return { ...DEFAULT_AUTH_CONFIG, ...(res?.auth_config || {}) };
+  } catch {
+    return DEFAULT_AUTH_CONFIG;
+  }
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [isLoadingPublicSettings, setIsLoadingPublicSettings] = useState(true);
   const [authError, setAuthError] = useState(null);
+  const [authConfig, setAuthConfig] = useState(DEFAULT_AUTH_CONFIG);
 
   useEffect(() => {
     checkAppState();
@@ -22,7 +45,9 @@ export function AuthProvider({ children }) {
       const currentUser = await base44.auth.me();
       setUser(currentUser);
       setIsAuthenticated(true);
+      setAuthError(null);
     } catch {
+      setUser(null);
       setIsAuthenticated(false);
       if (!isBase44Hosted()) {
         setAuthError({ type: "auth_required", message: "Authentication required" });
@@ -33,13 +58,13 @@ export function AuthProvider({ children }) {
   };
 
   const checkAppState = async () => {
+    const config = await fetchPublicAuthConfig();
+    setAuthConfig(config);
+
     if (isBase44Hosted()) {
       setAuthError(null);
       setIsLoadingPublicSettings(false);
-      setIsLoadingAuth(false);
-      if (appParams.token) {
-        checkUserAuth();
-      }
+      await checkUserAuth();
       return;
     }
 
@@ -82,11 +107,21 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const returnUrl = () => (typeof window !== "undefined" ? window.location.href : "/");
+
   const navigateToLogin = () => {
-    base44.auth.redirectToLogin(window.location.href);
+    base44.auth.redirectToLogin(returnUrl());
   };
 
-  const logout = () => base44.auth.logout(window.location.href);
+  const loginWithGoogle = () => {
+    base44.auth.loginWithProvider("google", returnUrl());
+  };
+
+  const loginWithSso = () => {
+    base44.auth.loginWithProvider("sso", returnUrl());
+  };
+
+  const logout = () => base44.auth.logout(returnUrl());
 
   return (
     <AuthContext.Provider
@@ -96,7 +131,10 @@ export function AuthProvider({ children }) {
         isLoadingAuth,
         isLoadingPublicSettings,
         authError,
+        authConfig,
         navigateToLogin,
+        loginWithGoogle,
+        loginWithSso,
         logout,
         checkAppState,
       }}

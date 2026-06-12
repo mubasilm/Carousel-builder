@@ -2,6 +2,7 @@ import { base44 } from "@/api/base44Client";
 import { normalizeSlides } from "@/lib/carousel-schema";
 import {
   archetypeToTheme,
+  assignSlideLayouts,
   buildExternalDesignPrompt,
   buildInAppDesignPrompt,
   inferArchetype,
@@ -17,8 +18,9 @@ import { enforceSlidesBudget } from "@/lib/slide-content-budget";
 const AI_TIMEOUT_MS = 8000;
 
 function packageResult(result, blogText, title, referenceUrls = []) {
-  const slides = enforceSlidesBudget(normalizeSlides(result.slides || []));
   const visualArchetype = result.visual_archetype || inferArchetype(blogText);
+  const rawSlides = normalizeSlides(result.slides || []);
+  const slides = enforceSlidesBudget(assignSlideLayouts(rawSlides, visualArchetype));
   const designTheme = result.design_theme || archetypeToTheme(visualArchetype);
   const carouselStrategy = result.carousel_strategy || {
     thesis: result.title || title,

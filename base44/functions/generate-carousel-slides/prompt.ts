@@ -93,7 +93,15 @@ Default: shareable thought leadership.
 - 6-8 slides: long essays, PDF adaptation
 
 ## Slide copy (DO NOT copy blog paragraphs — rewrite for carousel)
-Each slide: eyebrow, headline (cover under 12 words), body (max 40 words or 3-5 bullets), closing_line, footer, visual, type
+Each slide: eyebrow, headline (cover under 12 words), body (max 40 words or 3-5 bullets), closing_line, footer, visual, layout, type
+
+## Per-slide layout (assign layout field on every slide)
+- hook → cover-dark-green
+- cta → cta-split
+- bullet body (•) → bullet-list
+- comparison_brief archetype on insight slides → two-column
+- structured_diagram or signal_architecture → diagram-strip on insight slides
+- default interior → editorial-card
 
 ## Visual archetype (pick ONE)
 editorial_memo | structured_diagram | comparison_brief | signal_architecture
@@ -143,6 +151,10 @@ export const CAROUSEL_JSON_SCHEMA = {
           closing_line: { type: "string" },
           footer: { type: "string" },
           visual: { type: "string" },
+          layout: {
+            type: "string",
+            enum: ["cover-dark-green", "editorial-card", "bullet-list", "two-column", "diagram-strip", "cta-split"],
+          },
           cta: { type: "string" },
         },
         required: ["index", "type", "headline", "eyebrow", "visual"],

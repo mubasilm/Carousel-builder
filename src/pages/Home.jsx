@@ -1,6 +1,7 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import CarouselExportPanel from "@/components/carousel/CarouselExportPanel";
 import CarouselPreview from "@/components/carousel/CarouselPreview";
+import DesignLayoutSummary from "@/components/carousel/DesignLayoutSummary";
 import DesignOutputsPanel from "@/components/carousel/DesignOutputsPanel";
 import DesignThemePicker from "@/components/carousel/DesignThemePicker";
 import LogoPlacementPicker from "@/components/carousel/LogoPlacementPicker";
@@ -17,6 +18,7 @@ import {
 import { EMPTY_PROJECT, normalizeSlides } from "@/lib/carousel-schema";
 import {
   ARCHETYPE_LABELS,
+  archetypeToTheme,
   buildExternalDesignPrompt,
   buildInAppDesignPrompt,
 } from "@/lib/design-prompt";
@@ -67,6 +69,47 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [regeneratingIndex, setRegeneratingIndex] = useState(null);
+
+  const rebuildDesignPrompts = useCallback(() => {
+    const promptOpts = {
+      title: project.title,
+      slides,
+      visualArchetype,
+      carouselStrategy: carouselStrategy || { thesis: project.title },
+      referenceUrls: referenceUrls.filter(Boolean),
+      themeId: designTheme,
+      ctaSentence,
+      ctaButton,
+    };
+    const refreshedFigma = buildExternalDesignPrompt({ ...promptOpts, target: "figma" });
+    const refreshedClaude = buildExternalDesignPrompt({ ...promptOpts, target: "claude" });
+    const refreshedInApp = buildInAppDesignPrompt(promptOpts);
+    setFigmaMakePrompt(refreshedFigma);
+    setExternalDesignPrompt(refreshedClaude);
+    setInAppDesignPrompt(refreshedInApp);
+    return { refreshedFigma, refreshedClaude, refreshedInApp };
+  }, [
+    project.title,
+    slides,
+    visualArchetype,
+    carouselStrategy,
+    referenceUrls,
+    designTheme,
+    ctaSentence,
+    ctaButton,
+  ]);
+
+  useEffect(() => {
+    if (step !== 3 || !slides.length) return;
+    rebuildDesignPrompts();
+  }, [step, designTheme, visualArchetype, logoPlacement, rebuildDesignPrompts, slides.length]);
+
+  const handleArchetypeChange = (archetype) => {
+    setVisualArchetype(archetype);
+    const nextTheme = archetypeToTheme(archetype);
+    setDesignTheme(nextTheme);
+    setProject((p) => ({ ...p, visual_archetype: archetype, design_theme: nextTheme }));
+  };
 
   const saveProject = useCallback(
     async (updates = {}) => {
@@ -276,22 +319,7 @@ export default function Home() {
 
   const handleNext = async () => {
     if (step === 2) {
-      const promptOpts = {
-        title: project.title,
-        slides,
-        visualArchetype,
-        carouselStrategy: carouselStrategy || { thesis: project.title },
-        referenceUrls: referenceUrls.filter(Boolean),
-        themeId: designTheme,
-        ctaSentence,
-        ctaButton,
-      };
-      const refreshedFigma = buildExternalDesignPrompt({ ...promptOpts, target: "figma" });
-      const refreshedClaude = buildExternalDesignPrompt({ ...promptOpts, target: "claude" });
-      const refreshedInApp = buildInAppDesignPrompt(promptOpts);
-      setFigmaMakePrompt(refreshedFigma);
-      setExternalDesignPrompt(refreshedClaude);
-      setInAppDesignPrompt(refreshedInApp);
+      const { refreshedFigma, refreshedClaude, refreshedInApp } = rebuildDesignPrompts();
       await saveProject({
         slides,
         linkedin_caption: linkedinCaption,
@@ -419,6 +447,35 @@ export default function Home() {
                 {designInspirationNote}
               </div>
             )}
+
+            <div>
+              <h2 className="text-lg font-semibold text-text">Live preview</h2>
+              <p className="mt-1 text-sm text-muted">Theme and archetype changes update this preview instantly.</p>
+              <div className="mt-4">
+                <CarouselPreview
+                  slides={slides}
+                  themeId={designTheme}
+                  visualArchetype={visualArchetype}
+                  logoPlacement={logoPlacement}
+                  ctaSentence={ctaSentence}
+                  ctaButton={ctaButton}
+                  readOnly
+                  initialSlide={0}
+                />
+              </div>
+            </div>
+
+            <DesignThemePicker
+              themeId={designTheme}
+              onChange={setDesignTheme}
+              onShuffle={shuffleDesign}
+              visualArchetype={visualArchetype}
+            />
+            <ArchetypePicker value={visualArchetype} onChange={handleArchetypeChange} />
+            <LogoPlacementPicker value={logoPlacement} onChange={setLogoPlacement} />
+
+            <DesignLayoutSummary slides={slides} visualArchetype={visualArchetype} />
+
             <DesignOutputsPanel
               figmaMakePrompt={figmaMakePrompt}
               externalDesignPrompt={externalDesignPrompt}
@@ -426,14 +483,7 @@ export default function Home() {
               visualArchetype={visualArchetype}
               carouselStrategy={carouselStrategy}
             />
-            <DesignThemePicker
-              themeId={designTheme}
-              onChange={setDesignTheme}
-              onShuffle={shuffleDesign}
-              visualArchetype={visualArchetype}
-            />
-            <ArchetypePicker value={visualArchetype} onChange={setVisualArchetype} />
-            <LogoPlacementPicker value={logoPlacement} onChange={setLogoPlacement} />
+
             <div className="card-panel space-y-2">
               <p className="text-sm text-muted">
                 Layout theme: <strong className="text-text">{DESIGN_THEMES[designTheme]?.label}</strong>
