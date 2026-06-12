@@ -1,4 +1,5 @@
 import GenerationStatus from "@/components/GenerationStatus";
+import Base44PreviewDiagnostics from "@/components/Base44PreviewDiagnostics";
 
 export default function StepInput({
   sourceType,
@@ -12,6 +13,10 @@ export default function StepInput({
   onGenerate,
   loading,
   error,
+  showDiagnostics = false,
+  appId = "",
+  generationSource = "",
+  lastAiError = "",
 }) {
   const addReference = () => {
     setReferenceUrls([...referenceUrls, ""]);
@@ -30,6 +35,14 @@ export default function StepInput({
   return (
     <div className="space-y-6">
       <GenerationStatus />
+
+      {showDiagnostics && (
+        <Base44PreviewDiagnostics
+          appId={appId}
+          generationSource={generationSource}
+          lastAiError={lastAiError}
+        />
+      )}
 
       <div className="card-panel">
         <h2 className="text-xl font-bold text-text">Blog input</h2>

@@ -9,6 +9,7 @@ import {
 import { generateViaLocalLlm } from "@/lib/local-llm";
 import { generateCarouselLocally } from "@/lib/local-generate";
 import { BLOG_CAROUSEL_JSON_SCHEMA, BLOG_CAROUSEL_SKILL_INSTRUCTIONS } from "@/lib/prompts/blog-carousel-skill-prompt";
+import { isBase44Hosted } from "@/lib/app-params";
 import { canUseLocalLlm, getSetupStatus } from "@/lib/setup-check";
 
 const AI_TIMEOUT_MS = 8000;
@@ -125,24 +126,45 @@ async function generateViaBase44Function({ blogText, title, referenceUrls }) {
   return packageResult({ ...result, _source: "function" }, blogText, title, referenceUrls);
 }
 
+async function runAiAttempt(run, label) {
+  try {
+    return await withTimeout(run(), AI_TIMEOUT_MS, label);
+  } catch (error) {
+    return { error: error?.message || `${label} failed` };
+  }
+}
+
 async function tryAiGeneration({ blogText, title, referenceUrls }) {
   const errors = [];
+  const hosted = isBase44Hosted();
 
-  const llmAttempt = await withTimeout(
-    generateViaLlm({ blogText, title, referenceUrls }),
-    AI_TIMEOUT_MS,
-    "InvokeLLM",
-  );
-  if (llmAttempt?.slides?.length) return llmAttempt;
-  errors.push(llmAttempt?.error || "InvokeLLM failed");
+  const attempts = hosted
+    ? [
+        {
+          label: "generate-carousel-slides",
+          run: () => generateViaBase44Function({ blogText, title, referenceUrls }),
+        },
+        {
+          label: "InvokeLLM",
+          run: () => generateViaLlm({ blogText, title, referenceUrls }),
+        },
+      ]
+    : [
+        {
+          label: "InvokeLLM",
+          run: () => generateViaLlm({ blogText, title, referenceUrls }),
+        },
+        {
+          label: "generate-carousel-slides",
+          run: () => generateViaBase44Function({ blogText, title, referenceUrls }),
+        },
+      ];
 
-  const fnAttempt = await withTimeout(
-    generateViaBase44Function({ blogText, title, referenceUrls }),
-    AI_TIMEOUT_MS,
-    "generate-carousel-slides",
-  );
-  if (fnAttempt?.slides?.length) return fnAttempt;
-  errors.push(fnAttempt?.error || "Function failed");
+  for (const { label, run } of attempts) {
+    const attempt = await runAiAttempt(run, label);
+    if (attempt?.slides?.length) return attempt;
+    errors.push(attempt?.error || `${label} failed`);
+  }
 
   if (canUseLocalLlm()) {
     try {
@@ -206,6 +228,7 @@ export async function generateCarouselSlides({ blogText, title, referenceUrls = 
 
   return {
     ...skillDraft,
+    _aiError: aiResult?.error || "AI unavailable",
     _fallbackReason: `Using skill-engine copy (${aiResult?.error || "AI unavailable"}). Deploy: npx base44 functions deploy`,
   };
 }

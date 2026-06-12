@@ -6,13 +6,20 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user) {
-      return Response.json({ error: "Authentication required" }, { status: 401 });
+      return Response.json(
+        {
+          success: false,
+          error:
+            "Sign in to Base44 to use AI generation. Skill-engine slides still work without login.",
+        },
+        { status: 401 },
+      );
     }
 
     const { blogText, title, file_urls, referenceUrls } = await req.json();
-    if (!blogText || typeof blogText !== "string" || blogText.trim().length < 100) {
+    if (!blogText || typeof blogText !== "string" || blogText.trim().length < 50) {
       return Response.json(
-        { error: "Blog text must be at least 100 characters" },
+        { success: false, error: "Blog text must be at least 50 characters" },
         { status: 400 },
       );
     }

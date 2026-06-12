@@ -237,6 +237,40 @@ npx base44 deploy
 
 Configure internal access in the Base44 dashboard (invite-only or email domain allowlist for `@gtmbuddy.ai`).
 
+## Base44 preview troubleshooting
+
+**GitHub sync is not a deploy.** Syncing the repo into Base44 chat loads source files into context; it does **not** rebuild the preview iframe or deploy backend functions. After every sync from GitHub, run:
+
+```bash
+npx base44 login
+npx base44 link
+npx base44 entities push
+npx base44 functions deploy   # required for InvokeLLM via generate-carousel-slides
+npx base44 agents push
+npx base44 deploy             # rebuilds preview from latest main
+```
+
+**Verify the preview is current:**
+
+- Header shows build stamp (e.g. `build 2026-06-12-d`) — check the diagnostics panel on the Input step
+- Wizard shows **5 steps** (Input → Review → Design → Preview → Export), not the old 4-step boilerplate
+- Paste **50+ characters** and click **Generate carousel** — Review should show slides within ~1 second (skill engine)
+
+**Generation modes on Base44:**
+
+| Mode | Needs AI? | Notes |
+|------|-----------|-------|
+| Skill engine | No | Runs in the browser; always produces slides from pasted text |
+| Base44 function | Yes (InvokeLLM) | Server-side via `generate-carousel-slides` — requires `npx base44 functions deploy` |
+| Base44 InvokeLLM (frontend) | Yes | Fallback if function fails |
+
+**Common issues:**
+
+- **Empty Review step** — Preview is stale (re-run `npx base44 deploy`) or Generate was never clicked with enough text
+- **401 / auth errors** — Sign in to Base44 in the preview; skill-engine slides still work without AI login
+- **AI upgrade fails** — Run `npx base44 functions deploy`; an amber notice appears on Review but slides remain visible
+- **No external API keys needed** on Base44 — production uses Base44 InvokeLLM only (no Groq/Gemini/Anthropic keys in the hosted app)
+
 ## Skill sync
 
 When you have local clones of the skill repos:

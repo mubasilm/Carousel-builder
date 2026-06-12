@@ -23,6 +23,7 @@ import { formatApiError } from "@/lib/errors";
 import { getGenerationModeLabel } from "@/lib/setup-check";
 import { APP_BUILD } from "@/lib/build-info";
 import { useAuth } from "@/lib/AuthContext";
+import { getSetupStatus } from "@/lib/setup-check";
 
 const STEPS = [
   { id: 1, label: "Input" },
@@ -54,6 +55,7 @@ export default function Home() {
   const [ctaButton, setCtaButton] = useState("");
   const [generationSource, setGenerationSource] = useState("");
   const [generationNotice, setGenerationNotice] = useState("");
+  const [lastAiError, setLastAiError] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [regeneratingIndex, setRegeneratingIndex] = useState(null);
@@ -93,6 +95,10 @@ export default function Home() {
   const handleGenerate = async () => {
     setLoading(true);
     setError("");
+    setLastAiError("");
+    setGenerationNotice("");
+
+    let instantSlides = [];
 
     try {
       let blogText = sourceText;
@@ -121,7 +127,7 @@ export default function Home() {
         title,
         referenceUrls: referenceUrls.filter(Boolean),
       });
-      const instantSlides = normalizeSlides(instant.slides);
+      instantSlides = normalizeSlides(instant.slides);
       setSlides(instantSlides);
       setLinkedinCaption(instant.linkedin_caption || "");
       setHashtags(instant.hashtags || []);
@@ -152,52 +158,69 @@ export default function Home() {
         status: "draft",
       });
 
-      const generated = await generateCarouselSlides({
-        blogText,
-        title,
-        referenceUrls: referenceUrls.filter(Boolean),
-      });
-      const nextSlides = normalizeSlides(generated.slides);
+      try {
+        const generated = await generateCarouselSlides({
+          blogText,
+          title,
+          referenceUrls: referenceUrls.filter(Boolean),
+        });
+        const nextSlides = normalizeSlides(generated.slides);
 
-      if (!nextSlides.length) {
-        return;
+        if (nextSlides.length) {
+          setSlides(nextSlides);
+          setLinkedinCaption(generated.linkedin_caption || "");
+          setHashtags(generated.hashtags || []);
+          setDesignTheme(generated.design_theme || "editorial");
+          setVisualArchetype(generated.visual_archetype || "editorial_memo");
+          setFigmaMakePrompt(generated.figma_make_prompt || "");
+          setExternalDesignPrompt(generated.external_design_prompt || "");
+          setInAppDesignPrompt(generated.in_app_design_prompt || "");
+          setCarouselStrategy(generated.carousel_strategy || null);
+          setCtaSentence(generated.cta_sentence || "");
+          setCtaButton(generated.cta_button || "");
+          setGenerationSource(generated._source || "unknown");
+          setGenerationNotice(generated._fallbackReason || "");
+          if (generated._aiError) {
+            setLastAiError(generated._aiError);
+          }
+          setProject((p) => ({
+            ...p,
+            title: generated.title || title,
+            design_theme: generated.design_theme,
+            visual_archetype: generated.visual_archetype,
+          }));
+
+          await saveProject({
+            title: generated.title || title,
+            slides: nextSlides,
+            linkedin_caption: generated.linkedin_caption,
+            hashtags: generated.hashtags,
+            design_theme: generated.design_theme,
+            visual_archetype: generated.visual_archetype,
+            figma_make_prompt: generated.figma_make_prompt,
+            external_design_prompt: generated.external_design_prompt,
+            in_app_design_prompt: generated.in_app_design_prompt,
+            carousel_strategy: generated.carousel_strategy,
+            cta_sentence: generated.cta_sentence,
+            cta_button: generated.cta_button,
+            status: "draft",
+          });
+        } else if (generated._fallbackReason) {
+          setGenerationNotice(generated._fallbackReason);
+          if (generated._aiError) {
+            setLastAiError(generated._aiError);
+          }
+        }
+      } catch (aiErr) {
+        const aiMessage = formatApiError(aiErr);
+        setLastAiError(aiMessage);
+        setGenerationNotice(
+          `Using skill-engine copy (${aiMessage}). Deploy: npx base44 functions deploy`,
+        );
+        if (!instantSlides.length) {
+          throw aiErr;
+        }
       }
-
-      setSlides(nextSlides);
-      setLinkedinCaption(generated.linkedin_caption || "");
-      setHashtags(generated.hashtags || []);
-      setDesignTheme(generated.design_theme || "editorial");
-      setVisualArchetype(generated.visual_archetype || "editorial_memo");
-      setFigmaMakePrompt(generated.figma_make_prompt || "");
-      setExternalDesignPrompt(generated.external_design_prompt || "");
-      setInAppDesignPrompt(generated.in_app_design_prompt || "");
-      setCarouselStrategy(generated.carousel_strategy || null);
-      setCtaSentence(generated.cta_sentence || "");
-      setCtaButton(generated.cta_button || "");
-      setGenerationSource(generated._source || "unknown");
-      setGenerationNotice(generated._fallbackReason || "");
-      setProject((p) => ({
-        ...p,
-        title: generated.title || title,
-        design_theme: generated.design_theme,
-        visual_archetype: generated.visual_archetype,
-      }));
-
-      await saveProject({
-        title: generated.title || title,
-        slides: nextSlides,
-        linkedin_caption: generated.linkedin_caption,
-        hashtags: generated.hashtags,
-        design_theme: generated.design_theme,
-        visual_archetype: generated.visual_archetype,
-        figma_make_prompt: generated.figma_make_prompt,
-        external_design_prompt: generated.external_design_prompt,
-        in_app_design_prompt: generated.in_app_design_prompt,
-        carousel_strategy: generated.carousel_strategy,
-        cta_sentence: generated.cta_sentence,
-        cta_button: generated.cta_button,
-        status: "draft",
-      });
     } catch (err) {
       setError(formatApiError(err));
     } finally {
@@ -282,6 +305,8 @@ export default function Home() {
     await saveProject({ status: "exported" });
   };
 
+  const { isHosted, appId } = getSetupStatus();
+
   return (
     <div className="min-h-screen bg-page">
       <SetupBanner />
@@ -341,6 +366,10 @@ export default function Home() {
             onGenerate={handleGenerate}
             loading={loading}
             error={error}
+            showDiagnostics={isHosted}
+            appId={appId}
+            generationSource={generationSource}
+            lastAiError={lastAiError}
           />
         )}
 
