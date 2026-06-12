@@ -1,0 +1,4 @@
+interface:
+  display_name: "Blog to Carousel"
+  short_description: "Turn a blog into LinkedIn carousel copy and a Figma Make prompt."
+  default_prompt: "Convert this blog into a LinkedIn carousel using GTM Buddy context and generate the Figma Make prompt."

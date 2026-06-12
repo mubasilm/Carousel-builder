@@ -5,10 +5,13 @@
  */
 
 import { MARKETING_SKILLS_INSTRUCTIONS } from "@/lib/prompts/marketing-skills-prompt";
+import { DESIGN_SKILLS_INSTRUCTIONS } from "@/lib/prompts/design-skills-prompt";
 
 export const BLOG_CAROUSEL_SKILL_INSTRUCTIONS = `You convert long-form GTM Buddy content into a LinkedIn carousel package.
 
 ${MARKETING_SKILLS_INSTRUCTIONS}
+
+${DESIGN_SKILLS_INSTRUCTIONS}
 
 ## GTM Buddy rules (mandatory)
 - Revenue Activation category, not generic enablement or productivity framing
@@ -54,7 +57,7 @@ Each slide: one idea. Fields required:
 - Slide 1 (hook): dark forest green cover (#003013), white type
 - Interior slides: warm ivory (#f8f6ed), sharp typography, structured whitespace
 - Clean diagrams instead of stock imagery
-- 1080x1080px LinkedIn document format
+- 1200x1200px LinkedIn document format with 89px safe padding and nav chrome
 
 ## Figma Make prompt
 Generate a complete ready-to-paste Figma Make prompt including:

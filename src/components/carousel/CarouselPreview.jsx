@@ -14,6 +14,7 @@ export default function CarouselPreview({
   setSlides,
   themeId = "editorial",
   visualArchetype = "editorial_memo",
+  logoPlacement = "bottom_left",
   ctaSentence = "",
   ctaButton = "",
 }) {
@@ -50,6 +51,7 @@ export default function CarouselPreview({
               totalSlides={total}
               themeId={themeId}
               visualArchetype={visualArchetype}
+              logoPlacement={logoPlacement}
               ctaSentence={ctaSentence}
               ctaButton={ctaButton}
             />

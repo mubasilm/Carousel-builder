@@ -3,14 +3,15 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 MARKETING="${MARKETING_SKILLS:-$ROOT/../gtm-buddy-marketing-skills}"
-DESIGN="${DESIGN_ENGG:-$ROOT/../gtm-buddy-design-engg}"
-
+DESIGN="${DESIGN_ENGG:-/tmp/gtm-buddy-design-engg}"
 BLOG_CAROUSEL="${BLOG_CAROUSEL_SKILL:-$ROOT/src/lib/skills/blog-to-linkedin-carousel}"
+BLOG_ZIP="${BLOG_CAROUSEL_SKILL_ZIP:-/Users/mubasil/Documents/Playground/blog-to-linkedin-carousel-skill.zip}"
 DEST="$ROOT/src/lib/skills/marketing"
+DESIGN_DEST="$ROOT/src/lib/skills/design"
 
-mkdir -p "$DEST" "$ROOT/src/lib/skills/design" "$ROOT/src/lib/skills/blog-to-linkedin-carousel"
+mkdir -p "$DEST" "$DESIGN_DEST" "$ROOT/src/lib/skills/blog-to-linkedin-carousel"
 
-sync_skill() {
+sync_marketing_skill() {
   local src_dir="$1"
   local dest_name="$2"
   if [[ -f "$MARKETING/skills/$src_dir/SKILL.md" ]]; then
@@ -21,48 +22,57 @@ sync_skill() {
   fi
 }
 
+sync_design_skill() {
+  local src_dir="$1"
+  local dest_name="$2"
+  if [[ -f "$DESIGN/skills/$src_dir/SKILL.md" ]]; then
+    cp "$DESIGN/skills/$src_dir/SKILL.md" "$DESIGN_DEST/$dest_name"
+    echo "  synced design/$dest_name"
+  else
+    echo "  skip design/$dest_name (not found)"
+  fi
+}
+
 if [[ -d "$MARKETING" ]]; then
   echo "Syncing marketing skills from $MARKETING"
-  sync_skill "social" "social-skill.md"
-  sync_skill "content-strategy" "content-strategy-skill.md"
-  sync_skill "copywriting" "copywriting-skill.md"
-  sync_skill "copy-editing" "copy-editing-skill.md"
-  sync_skill "product-marketing" "product-marketing-skill.md"
-  sync_skill "ad-creative" "ad-creative-skill.md"
-
-  if [[ -f "$MARKETING/skills/social/references/post-templates.md" ]]; then
-    cp "$MARKETING/skills/social/references/post-templates.md" "$DEST/post-templates.md"
-  fi
-  if [[ -f "$MARKETING/skills/social/references/platforms.md" ]]; then
-    cp "$MARKETING/skills/social/references/platforms.md" "$DEST/platforms.md"
-  fi
-  if [[ -f "$MARKETING/.agents/content-governance.md" ]]; then
-    cp "$MARKETING/.agents/content-governance.md" "$DEST/content-governance.md"
-  fi
-  if [[ -f "$MARKETING/.agents/product-marketing-context.md" ]]; then
-    cp "$MARKETING/.agents/product-marketing-context.md" "$DEST/product-marketing-context.md"
-  fi
+  sync_marketing_skill "social" "social-skill.md"
+  sync_marketing_skill "content-strategy" "content-strategy-skill.md"
+  sync_marketing_skill "copywriting" "copywriting-skill.md"
+  sync_marketing_skill "copy-editing" "copy-editing-skill.md"
+  sync_marketing_skill "product-marketing" "product-marketing-skill.md"
+  sync_marketing_skill "ad-creative" "ad-creative-skill.md"
+  [[ -f "$MARKETING/skills/social/references/post-templates.md" ]] && cp "$MARKETING/skills/social/references/post-templates.md" "$DEST/post-templates.md"
+  [[ -f "$MARKETING/skills/social/references/platforms.md" ]] && cp "$MARKETING/skills/social/references/platforms.md" "$DEST/platforms.md"
+  [[ -f "$MARKETING/.agents/content-governance.md" ]] && cp "$MARKETING/.agents/content-governance.md" "$DEST/content-governance.md"
+  [[ -f "$MARKETING/.agents/product-marketing-context.md" ]] && cp "$MARKETING/.agents/product-marketing-context.md" "$DEST/product-marketing-context.md"
   echo "Synced marketing skills"
 else
   echo "Skip marketing: $MARKETING not found"
-  echo "Clone: git clone git@github.com:GTM-Buddy-Marketing/gtm-buddy-marketing-skills.git ../gtm-buddy-marketing-skills"
 fi
 
 if [[ -d "$DESIGN" ]]; then
-  cp "$DESIGN/DESIGN.md" "$ROOT/src/lib/skills/design/DESIGN.md"
-  cp "$DESIGN/.agents/design-system.md" "$ROOT/src/lib/skills/design/design-system.md"
+  echo "Syncing design-engg from $DESIGN"
+  cp "$DESIGN/DESIGN.md" "$DESIGN_DEST/DESIGN.md"
+  [[ -f "$DESIGN/.agents/design-system.md" ]] && cp "$DESIGN/.agents/design-system.md" "$DESIGN_DEST/design-system.md"
+  [[ -f "$DESIGN/.agents/frontend-guidelines.md" ]] && cp "$DESIGN/.agents/frontend-guidelines.md" "$DESIGN_DEST/frontend-guidelines.md"
+  sync_design_skill "lp-design" "lp-design-skill.md"
+  sync_design_skill "figma-qa" "figma-qa-skill.md"
+  sync_design_skill "frontend-review" "frontend-review-skill.md"
+  sync_design_skill "cro" "cro-skill.md"
+  sync_design_skill "qa" "qa-skill.md"
+  sync_design_skill "launch-checklist" "launch-checklist-skill.md"
   echo "Synced design-engg"
 else
-  echo "Skip design: $DESIGN not found"
+  echo "Skip design: $DESIGN not found (clone gtm-buddy-design-engg to /tmp or set DESIGN_ENGG)"
 fi
 
-if [[ -f "$BLOG_CAROUSEL/SKILL.md" ]]; then
+if [[ -f "$BLOG_ZIP" ]]; then
+  unzip -o "$BLOG_ZIP" -d "$ROOT/src/lib/skills/blog-to-linkedin-carousel"
+  echo "Synced blog-to-linkedin-carousel from $BLOG_ZIP"
+elif [[ -f "$BLOG_CAROUSEL/SKILL.md" ]]; then
   echo "blog-to-linkedin-carousel skill present"
-elif [[ -f "${BLOG_CAROUSEL_SKILL_ZIP:-}" ]]; then
-  unzip -o "$BLOG_CAROUSEL_SKILL_ZIP" -d "$ROOT/src/lib/skills/blog-to-linkedin-carousel"
-  echo "Synced blog-to-linkedin-carousel from zip"
 else
-  echo "Skip blog carousel: vendored copy in src/lib/skills/blog-to-linkedin-carousel"
+  echo "Skip blog carousel zip"
 fi
 
-echo "Done. Redeploy: npx base44 functions deploy && npx base44 agents push"
+echo "Done. Redeploy: npx base44 functions deploy && npx base44 agents push && npx base44 deploy --yes"

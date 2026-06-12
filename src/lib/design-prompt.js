@@ -1,4 +1,6 @@
 import { getTheme } from "@/lib/design-themes";
+import { IN_APP_RENDERER_SPEC } from "@/lib/prompts/design-skills-prompt";
+import { SLIDE_PAD_PERCENT, SLIDE_SIZE } from "@/lib/slide-constants";
 
 export const ARCHETYPE_LABELS = {
   editorial_memo: "Editorial memo — strong type, minimal graphics, premium whitespace",
@@ -42,7 +44,7 @@ export function buildExternalDesignPrompt({
 }) {
   const theme = getTheme(themeId);
   const refNote = referenceUrls.filter(Boolean).length
-    ? `\nReference frames (use as visual reference):\n${referenceUrls.filter(Boolean).map((u) => `- ${u}`).join("\n")}`
+    ? `\nDesign inspiration (layout mood, not pixel copy):\n${referenceUrls.filter(Boolean).map((u) => `- ${u}`).join("\n")}`
     : "";
 
   const slideBlocks = slides
@@ -65,7 +67,7 @@ Visual: ${s.visual || "Clean editorial layout with structured whitespace"}`;
   return `${executor}
 
 FORMAT
-- 1080 x 1080 px per slide
+- ${SLIDE_SIZE} x ${SLIDE_SIZE} px per slide
 - ${slides.length} slides total
 - LinkedIn document / carousel post format
 
@@ -105,7 +107,7 @@ QUALITY BAR
 - Cover headline under 12 words
 - Export-ready for LinkedIn PDF upload
 
-${target === "claude" ? "OUTPUT: Describe each slide layout precisely, then produce final 1080x1080 designs or HTML/CSS per slide." : "OUTPUT: Generate all slides in Figma with the above copy and visual system."}`;
+${target === "claude" ? `OUTPUT: Describe each slide layout precisely, then produce final ${SLIDE_SIZE}x${SLIDE_SIZE} designs or HTML/CSS per slide.` : "OUTPUT: Generate all slides in Figma with the above copy and visual system."}`;
 }
 
 /** @deprecated use buildExternalDesignPrompt */
@@ -154,6 +156,7 @@ page_bg: ${i === 0 && s.type === "hook" ? "#003013" : theme.pageBg}`;
     .join("\n\n");
 
   return `IN-APP CAROUSEL RENDER SPEC
+${IN_APP_RENDERER_SPEC}
 Theme: ${theme.label} (${themeId})
 Archetype: ${ARCHETYPE_LABELS[visualArchetype]}
 Thesis: ${carouselStrategy.thesis || title}
@@ -161,10 +164,10 @@ CTA: "${ctaSentence}" / [${ctaButton}]
 
 GLOBAL
 - Font: Geist / Inter stack
-- Cover: #003013 bg, white type
-- Interior: ${theme.pageBg}
+- Cover: #003013 bg, white type, light logo
+- Interior: ${theme.pageBg}, dark logo
 - Accent: ${theme.accent}
-- 1080x1080, padding 7.4%
+- ${SLIDE_SIZE}x${SLIDE_SIZE}, padding ${SLIDE_PAD_PERCENT}, nav chrome on every slide
 
 SLIDES
 ${slideSpecs}`;

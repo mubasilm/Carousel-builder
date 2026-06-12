@@ -135,6 +135,16 @@
     "cta_button": {
       "type": "string",
       "description": "CTA button label only"
+    },
+    "target_slide_count": {
+      "type": "number",
+      "description": "User-selected total slide count (4-8)"
+    },
+    "logo_placement": {
+      "type": "string",
+      "enum": ["bottom_left", "top_right", "cover_footer_strip"],
+      "default": "bottom_left",
+      "description": "GTM Buddy logo placement on carousel slides"
     }
   },
   "required": [

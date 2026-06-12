@@ -53,9 +53,29 @@ Rotate headline structures across slides; do not repeat the same opening pattern
 - eyebrow = short label; headline = scroll-stopper; body = bullets or ≤40 words
 - visual field = layout/diagram direction for the slide renderer`;
 
+export const DESIGN_SKILLS_PROMPT = `## GTM Buddy design system (design-engg — mandatory for in-app renderer)
+
+Frame: **1200×1200px** per slide with **89px safe padding**, **72px bottom nav chrome** reserved (progress, page number, dots, swipe hint).
+
+### Visual language (lp-design + design-system)
+- Warm ivory canvas (#f8f6ed), soft borders (#e8e3d8), green as intelligence accent — not decorative wash
+- No dark hero bands except hook cover (#003013), no SaaS gradients, no purple-primary branding
+- Pastel modules organize content — not random decoration
+- Typography: Geist/Inter, tight letter-spacing on headlines (-0.04em), editorial calm whitespace
+- GTM Buddy logo: light variant on dark hook; dark variant on ivory slides
+
+### Theme layouts (each must look distinct)
+- editorial | bold_hook | split_frame | minimal | framework | dark_strip
+
+### Strict frame rules
+- All text must fit inside safe zone — never clip outside 1200×1200
+- Every slide shows nav chrome: progress bar, N/Total, dot indicators, Swipe → (except last slide)`;
+
 export const CAROUSEL_CONTENT_PROMPT = `You convert long-form GTM Buddy content into a LinkedIn carousel package.
 
 ${MARKETING_SKILLS_PROMPT}
+
+${DESIGN_SKILLS_PROMPT}
 
 ## GTM Buddy rules (mandatory)
 - Revenue Activation category, not generic enablement or productivity framing
@@ -80,7 +100,7 @@ editorial_memo | structured_diagram | comparison_brief | signal_architecture
 
 ## Design defaults
 - Hook cover: #003013 dark green, white type
-- Interior: #f8f6ed ivory, 1080x1080
+- Interior: #f8f6ed ivory, 1200x1200 with 89px safe padding
 
 ## Outputs required
 - figma_make_prompt: ready for Figma Make

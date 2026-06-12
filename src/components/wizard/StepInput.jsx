@@ -1,5 +1,7 @@
+import { useEffect, useMemo, useState } from "react";
 import GenerationStatus from "@/components/GenerationStatus";
 import Base44PreviewDiagnostics from "@/components/Base44PreviewDiagnostics";
+import { recommendSlideCount } from "@/lib/skill-content-engine";
 
 export default function StepInput({
   sourceType,
@@ -10,6 +12,8 @@ export default function StepInput({
   setSourceText,
   referenceUrls,
   setReferenceUrls,
+  targetSlideCount,
+  setTargetSlideCount,
   onGenerate,
   loading,
   error,
@@ -18,6 +22,17 @@ export default function StepInput({
   generationSource = "",
   lastAiError = "",
 }) {
+  const recommended = useMemo(() => {
+    const text = sourceType === "paste" ? sourceText : "";
+    return text.trim().length >= 50 ? recommendSlideCount(text) : 5;
+  }, [sourceText, sourceType]);
+
+  useEffect(() => {
+    if (!targetSlideCount) {
+      setTargetSlideCount(recommended);
+    }
+  }, [recommended, setTargetSlideCount, targetSlideCount]);
+
   const addReference = () => {
     setReferenceUrls([...referenceUrls, ""]);
   };
@@ -47,7 +62,7 @@ export default function StepInput({
       <div className="card-panel">
         <h2 className="text-xl font-bold text-text">Blog input</h2>
         <p className="mt-2 text-sm text-muted">
-          Paste blog content (50+ characters), then click Generate carousel. Slides appear instantly; Base44 AI may upgrade copy in the background.
+          Paste blog content (50+ characters), choose slide count, then click Generate carousel.
         </p>
 
         <div className="mt-6 flex gap-2">
@@ -89,12 +104,40 @@ export default function StepInput({
             />
           </div>
         )}
+
+        <div className="mt-6">
+          <label className="mb-1.5 block text-sm font-medium text-text-soft">
+            Number of slides
+            <span className="ml-2 text-xs font-normal text-muted">Recommended: {recommended}</span>
+          </label>
+          <div className="flex flex-wrap items-center gap-3">
+            <input
+              type="range"
+              min={4}
+              max={8}
+              value={targetSlideCount || recommended}
+              onChange={(e) => setTargetSlideCount(Number(e.target.value))}
+              className="w-full max-w-xs"
+            />
+            <span className="rounded-full bg-green-soft px-3 py-1 text-sm font-semibold text-green-800">
+              {targetSlideCount || recommended} slides
+            </span>
+            <button
+              type="button"
+              className="btn-secondary text-sm"
+              onClick={() => setTargetSlideCount(recommended)}
+            >
+              Use recommended
+            </button>
+          </div>
+          <p className="mt-1 text-xs text-muted">Minimum 4 slides. We suggest {recommended} based on blog length.</p>
+        </div>
       </div>
 
       <div className="card-panel">
-        <h3 className="text-base font-semibold text-text">Design references (phase 2)</h3>
+        <h3 className="text-base font-semibold text-text">Design inspiration (optional)</h3>
         <p className="mt-1 text-sm text-muted-light">
-          Attach Figma frame URLs for future reference-driven design. Stored but not processed in MVP.
+          Add Figma, LinkedIn carousel, Pinterest, or Dribbble links for visual direction inspiration — layout mood, not a pixel copy.
         </p>
 
         <div className="mt-4 space-y-2">
@@ -103,7 +146,7 @@ export default function StepInput({
               <input
                 type="url"
                 className="input-field"
-                placeholder="https://www.figma.com/design/..."
+                placeholder="https://www.figma.com/design/... or LinkedIn carousel URL"
                 value={url}
                 onChange={(e) => updateReference(i, e.target.value)}
               />
@@ -114,7 +157,7 @@ export default function StepInput({
           ))}
         </div>
         <button type="button" className="btn-secondary mt-3" onClick={addReference}>
-          Add reference URL
+          Add inspiration link
         </button>
       </div>
 

@@ -1,14 +1,24 @@
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import JSZip from "jszip";
-
-const SLIDE_SIZE = 1080;
+import { SLIDE_SIZE } from "@/lib/slide-constants";
+import { detectSlideOverflow } from "@/lib/slide-content-budget";
 
 async function waitForFonts() {
   if (document.fonts?.ready) {
     await document.fonts.ready;
   }
   await new Promise((resolve) => setTimeout(resolve, 300));
+}
+
+export async function validateSlidesBeforeExport(slideElements) {
+  const warnings = [];
+  slideElements.forEach((el, i) => {
+    if (detectSlideOverflow(el)) {
+      warnings.push(`Slide ${i + 1} content may be clipped — shorten copy before export.`);
+    }
+  });
+  return warnings;
 }
 
 export async function captureSlideElement(element) {

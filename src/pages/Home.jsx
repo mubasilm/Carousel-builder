@@ -3,6 +3,8 @@ import CarouselExportPanel from "@/components/carousel/CarouselExportPanel";
 import CarouselPreview from "@/components/carousel/CarouselPreview";
 import DesignOutputsPanel from "@/components/carousel/DesignOutputsPanel";
 import DesignThemePicker from "@/components/carousel/DesignThemePicker";
+import LogoPlacementPicker from "@/components/carousel/LogoPlacementPicker";
+import ArchetypePicker from "@/components/carousel/ArchetypePicker";
 import SetupBanner from "@/components/SetupBanner";
 import StepInput from "@/components/wizard/StepInput";
 import StepReview from "@/components/wizard/StepReview";
@@ -20,6 +22,9 @@ import {
 } from "@/lib/design-prompt";
 import { DESIGN_THEMES, THEME_IDS } from "@/lib/design-themes";
 import { formatApiError } from "@/lib/errors";
+import { formatAiErrorForUser } from "@/lib/ai-error-messages";
+import { mapDesignReferences } from "@/lib/design-reference-mapper";
+import { recommendSlideCount } from "@/lib/skill-content-engine";
 import { getGenerationModeLabel } from "@/lib/setup-check";
 import { APP_BUILD } from "@/lib/build-info";
 import { useAuth } from "@/lib/AuthContext";
@@ -56,6 +61,9 @@ export default function Home() {
   const [generationSource, setGenerationSource] = useState("");
   const [generationNotice, setGenerationNotice] = useState("");
   const [lastAiError, setLastAiError] = useState("");
+  const [targetSlideCount, setTargetSlideCount] = useState(5);
+  const [logoPlacement, setLogoPlacement] = useState("bottom_left");
+  const [designInspirationNote, setDesignInspirationNote] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [regeneratingIndex, setRegeneratingIndex] = useState(null);
@@ -80,6 +88,8 @@ export default function Home() {
         carousel_strategy: updates.carousel_strategy ?? carouselStrategy,
         cta_sentence: updates.cta_sentence ?? ctaSentence,
         cta_button: updates.cta_button ?? ctaButton,
+        target_slide_count: updates.target_slide_count ?? targetSlideCount,
+        logo_placement: updates.logo_placement ?? logoPlacement,
       };
 
       const saved = await saveCarouselProject({ projectId, payload });
@@ -89,7 +99,7 @@ export default function Home() {
       setProject(saved);
       return saved;
     },
-    [project, projectId, sourceType, sourceUrl, sourceText, slides, linkedinCaption, hashtags, referenceUrls, designTheme, visualArchetype, figmaMakePrompt, externalDesignPrompt, inAppDesignPrompt, carouselStrategy, ctaSentence, ctaButton],
+    [project, projectId, sourceType, sourceUrl, sourceText, slides, linkedinCaption, hashtags, referenceUrls, designTheme, visualArchetype, figmaMakePrompt, externalDesignPrompt, inAppDesignPrompt, carouselStrategy, ctaSentence, ctaButton, targetSlideCount, logoPlacement],
   );
 
   const handleGenerate = async () => {
@@ -121,11 +131,18 @@ export default function Home() {
         throw new Error("Please paste at least 50 characters of blog content");
       }
 
-      // Instant skill-engine slides (no network) — guarantees content on Base44 preview
+      const slideCount = targetSlideCount || recommendSlideCount(blogText);
+      const refs = referenceUrls.filter(Boolean);
+      const refHints = mapDesignReferences({ referenceUrls: refs, blogText, title });
+      if (refHints.designTheme) setDesignTheme(refHints.designTheme);
+      if (refHints.visualArchetype) setVisualArchetype(refHints.visualArchetype);
+      setDesignInspirationNote(refHints.inspirationNote || "");
+
       const instant = generateCarouselSlidesSync({
         blogText,
         title,
-        referenceUrls: referenceUrls.filter(Boolean),
+        referenceUrls: refs,
+        targetSlideCount: slideCount,
       });
       instantSlides = normalizeSlides(instant.slides);
       setSlides(instantSlides);
@@ -155,6 +172,8 @@ export default function Home() {
         carousel_strategy: instant.carousel_strategy,
         cta_sentence: instant.cta_sentence,
         cta_button: instant.cta_button,
+        target_slide_count: slideCount,
+        logo_placement: logoPlacement,
         status: "draft",
       });
 
@@ -162,7 +181,8 @@ export default function Home() {
         const generated = await generateCarouselSlides({
           blogText,
           title,
-          referenceUrls: referenceUrls.filter(Boolean),
+          referenceUrls: refs,
+          targetSlideCount: slideCount,
         });
         const nextSlides = normalizeSlides(generated.slides);
 
@@ -212,11 +232,9 @@ export default function Home() {
           }
         }
       } catch (aiErr) {
-        const aiMessage = formatApiError(aiErr);
-        setLastAiError(aiMessage);
-        setGenerationNotice(
-          `Using skill-engine copy (${aiMessage}). Deploy: npx base44 functions deploy`,
-        );
+        const aiMessage = formatAiErrorForUser(formatApiError(aiErr));
+        setLastAiError(formatApiError(aiErr));
+        setGenerationNotice(`Using skill-engine copy. ${aiMessage}`);
         if (!instantSlides.length) {
           throw aiErr;
         }
@@ -363,6 +381,8 @@ export default function Home() {
             setSourceText={setSourceText}
             referenceUrls={referenceUrls}
             setReferenceUrls={setReferenceUrls}
+            targetSlideCount={targetSlideCount}
+            setTargetSlideCount={setTargetSlideCount}
             onGenerate={handleGenerate}
             loading={loading}
             error={error}
@@ -394,6 +414,11 @@ export default function Home() {
 
         {step === 3 && (
           <div className="space-y-6">
+            {designInspirationNote && (
+              <div className="rounded-lg border border-border bg-page-soft px-4 py-3 text-sm text-muted">
+                {designInspirationNote}
+              </div>
+            )}
             <DesignOutputsPanel
               figmaMakePrompt={figmaMakePrompt}
               externalDesignPrompt={externalDesignPrompt}
@@ -407,6 +432,8 @@ export default function Home() {
               onShuffle={shuffleDesign}
               visualArchetype={visualArchetype}
             />
+            <ArchetypePicker value={visualArchetype} onChange={setVisualArchetype} />
+            <LogoPlacementPicker value={logoPlacement} onChange={setLogoPlacement} />
             <div className="card-panel space-y-2">
               <p className="text-sm text-muted">
                 Layout theme: <strong className="text-text">{DESIGN_THEMES[designTheme]?.label}</strong>
@@ -429,6 +456,7 @@ export default function Home() {
             setSlides={setSlides}
             themeId={designTheme}
             visualArchetype={visualArchetype}
+            logoPlacement={logoPlacement}
             ctaSentence={ctaSentence}
             ctaButton={ctaButton}
           />
@@ -440,6 +468,7 @@ export default function Home() {
             slides={slides}
             themeId={designTheme}
             visualArchetype={visualArchetype}
+            logoPlacement={logoPlacement}
             ctaSentence={ctaSentence}
             ctaButton={ctaButton}
             onExported={handleExported}

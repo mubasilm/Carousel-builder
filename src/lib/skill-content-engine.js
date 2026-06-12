@@ -53,6 +53,17 @@ function pickSlideCount(text) {
   return 7;
 }
 
+/** Exported for Input step recommendation */
+export function recommendSlideCount(text) {
+  return pickSlideCount(text);
+}
+
+function clampSlideCount(n) {
+  const v = Number(n);
+  if (Number.isNaN(v)) return 5;
+  return Math.min(8, Math.max(4, Math.round(v)));
+}
+
 function classifySource(text) {
   const t = text.toLowerCase();
   if (/vs\.|versus|compare|battlecard|wedge/.test(t)) return "competitive";
@@ -145,12 +156,12 @@ const VISUAL_BY_TYPE = {
   cta: "Split footer: value sentence left, green CTA button right (#00692B)",
 };
 
-export function synthesizeCarouselFromBlog({ blogText, title }) {
+export function synthesizeCarouselFromBlog({ blogText, title, targetSlideCount }) {
   const clean = blogText.trim();
   const paras = paragraphs(clean);
   const sents = sentences(clean);
   const sourceType = classifySource(clean);
-  const slideCount = pickSlideCount(clean);
+  const totalSlides = clampSlideCount(targetSlideCount ?? pickSlideCount(clean));
   const carouselTitle = title || extractThesis("", paras, sents);
   const thesis = extractThesis(title, paras, sents);
   const hook = makeHook(thesis, sourceType, clean);
@@ -167,7 +178,7 @@ export function synthesizeCarouselFromBlog({ blogText, title }) {
     { maxWords: LINKEDIN_LIMITS.bodyWords },
   );
 
-  const insightCount = Math.max(1, slideCount - 4);
+  const insightCount = Math.max(0, totalSlides - 4);
   const insightBlocks = pickInsightBlocks(paras, insightCount);
 
   const insightSlides = insightBlocks.map((block, i) => {

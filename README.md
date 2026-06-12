@@ -9,7 +9,7 @@ GTM Buddy internal Base44 app that turns blog content into branded LinkedIn caro
 - AI generation via Base44 InvokeLLM or local Claude (Anthropic API)
 - Editable review step with per-slide regenerate
 - Dual design outputs: Figma Make / Claude prompts + in-app renderer
-- GTM Buddy branded 1080×1080 slide preview with editable copy
+- GTM Buddy branded 1200×1200 slide preview with editable copy
 - PDF download (one slide per page) and PNG ZIP export
 - Project persistence via `CarouselProject` entity
 - Phase 2 stubs for Figma reference URLs
@@ -70,7 +70,7 @@ flowchart LR
 | **Input** | Paste blog or URL; optional reference frames | Generation mode indicator (Claude, Base44, or skill engine) |
 | **Review** | Edit eyebrow, headline, body, closing line, visual notes | Carousel-native copy (not blog paragraphs) |
 | **Design** | Choose theme; copy external or in-app design prompts | Figma Make prompt, Claude prompt, in-app renderer spec |
-| **Preview** | Edit copy beside live 1080×1080 preview | Updated slides reflected in export |
+| **Preview** | Edit copy beside live 1200×1200 preview | Updated slides reflected in export |
 | **Export** | Download PDF/PNG or copy prompts | LinkedIn-ready carousel package |
 
 ## Architecture

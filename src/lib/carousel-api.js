@@ -11,11 +11,13 @@ import { generateCarouselLocally } from "@/lib/local-generate";
 import { BLOG_CAROUSEL_JSON_SCHEMA, BLOG_CAROUSEL_SKILL_INSTRUCTIONS } from "@/lib/prompts/blog-carousel-skill-prompt";
 import { isBase44Hosted } from "@/lib/app-params";
 import { canUseLocalLlm, getSetupStatus } from "@/lib/setup-check";
+import { formatAiErrorChain } from "@/lib/ai-error-messages";
+import { enforceSlidesBudget } from "@/lib/slide-content-budget";
 
 const AI_TIMEOUT_MS = 8000;
 
 function packageResult(result, blogText, title, referenceUrls = []) {
-  const slides = normalizeSlides(result.slides || []);
+  const slides = enforceSlidesBudget(normalizeSlides(result.slides || []));
   const visualArchetype = result.visual_archetype || inferArchetype(blogText);
   const designTheme = result.design_theme || archetypeToTheme(visualArchetype);
   const carouselStrategy = result.carousel_strategy || {
@@ -61,8 +63,8 @@ function packageResult(result, blogText, title, referenceUrls = []) {
   };
 }
 
-function buildSkillDraft({ blogText, title, referenceUrls, reason = "" }) {
-  const local = generateCarouselLocally({ blogText, title, referenceUrls });
+function buildSkillDraft({ blogText, title, referenceUrls, targetSlideCount, reason = "" }) {
+  const local = generateCarouselLocally({ blogText, title, referenceUrls, targetSlideCount });
   return packageResult(
     {
       ...local,
@@ -179,12 +181,12 @@ async function tryAiGeneration({ blogText, title, referenceUrls }) {
 }
 
 /** Synchronous skill-only generation — always works in browser, no network. */
-export function generateCarouselSlidesSync({ blogText, title, referenceUrls = [] }) {
+export function generateCarouselSlidesSync({ blogText, title, referenceUrls = [], targetSlideCount }) {
   const cleanText = (blogText || "").trim();
   if (cleanText.length < 50) {
     throw new Error("Please provide at least 50 characters of blog content.");
   }
-  return buildSkillDraft({ blogText: cleanText, title, referenceUrls });
+  return buildSkillDraft({ blogText: cleanText, title, referenceUrls, targetSlideCount });
 }
 
 export async function fetchBlogContent(url) {
@@ -199,13 +201,13 @@ export async function fetchBlogContent(url) {
   }
 }
 
-export async function generateCarouselSlides({ blogText, title, referenceUrls = [] }) {
+export async function generateCarouselSlides({ blogText, title, referenceUrls = [], targetSlideCount }) {
   const cleanText = (blogText || "").trim();
   if (cleanText.length < 50) {
     throw new Error("Please provide at least 50 characters of blog content for carousel generation.");
   }
 
-  const skillDraft = buildSkillDraft({ blogText: cleanText, title, referenceUrls });
+  const skillDraft = buildSkillDraft({ blogText: cleanText, title, referenceUrls, targetSlideCount });
   if (!skillDraft.slides.length) {
     throw new Error("Carousel generation failed. No slides were produced.");
   }
@@ -228,8 +230,8 @@ export async function generateCarouselSlides({ blogText, title, referenceUrls = 
 
   return {
     ...skillDraft,
-    _aiError: aiResult?.error || "AI unavailable",
-    _fallbackReason: `Using skill-engine copy (${aiResult?.error || "AI unavailable"}). Deploy: npx base44 functions deploy`,
+    _aiError: formatAiErrorChain(aiResult?.error || "AI unavailable"),
+    _fallbackReason: `Using skill-engine copy (${formatAiErrorChain(aiResult?.error || "AI unavailable")}).`,
   };
 }
 

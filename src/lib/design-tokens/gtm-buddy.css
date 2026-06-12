@@ -41,7 +41,9 @@
   --radius-lg: 18px;
 
   /* LinkedIn carousel canvas */
-  --slide-size: 1080px;
+  --cta-blue: #246edc;
+  --cta-blue-hover: #1d5fc2;
+  --slide-size: 1200px;
   --slide-padding: 80px;
   --slide-headline: 64px;
   --slide-body: 32px;
