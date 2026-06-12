@@ -5,12 +5,185 @@ GTM Buddy internal Base44 app that turns blog content into branded LinkedIn caro
 ## Features
 
 - Paste a blog URL or full article text
-- AI-generated carousel slide copy (6–10 slides)
+- Skill-driven carousel copy (blog-to-linkedin-carousel + GTM Buddy marketing/design skills)
+- AI generation via Base44 InvokeLLM or local Claude (Anthropic API)
 - Editable review step with per-slide regenerate
-- GTM Buddy branded 1080×1080 slide preview
+- Dual design outputs: Figma Make / Claude prompts + in-app renderer
+- GTM Buddy branded 1080×1080 slide preview with editable copy
 - PDF download (one slide per page) and PNG ZIP export
 - Project persistence via `CarouselProject` entity
 - Phase 2 stubs for Figma reference URLs
+
+## How it works
+
+Five-step wizard from blog input to LinkedIn-ready assets.
+
+```mermaid
+flowchart LR
+  subgraph Input["1. Input"]
+    A[Blog URL or paste]
+    B[Optional Figma refs]
+  end
+
+  subgraph Generate["Generate"]
+    C[blog-to-linkedin-carousel skill]
+    D[AI or skill engine]
+  end
+
+  subgraph Review["2. Review"]
+    E[Edit slide copy]
+    F[Caption + hashtags]
+  end
+
+  subgraph Design["3. Design"]
+    G[Pick layout theme]
+    H[External design prompts]
+    I[In-app render spec]
+  end
+
+  subgraph Preview["4. Preview"]
+    J[Live slide editor]
+  end
+
+  subgraph Export["5. Export"]
+    K[PDF / PNG ZIP]
+    L[Copy Figma or Claude prompt]
+  end
+
+  A --> C
+  B --> C
+  C --> D
+  D --> E
+  E --> G
+  G --> H
+  G --> I
+  H --> L
+  I --> J
+  J --> K
+  F --> Export
+```
+
+### Wizard steps
+
+| Step | What you do | What you get |
+|------|-------------|--------------|
+| **Input** | Paste blog or URL; optional reference frames | Generation mode indicator (Claude, Base44, or skill engine) |
+| **Review** | Edit eyebrow, headline, body, closing line, visual notes | Carousel-native copy (not blog paragraphs) |
+| **Design** | Choose theme; copy external or in-app design prompts | Figma Make prompt, Claude prompt, in-app renderer spec |
+| **Preview** | Edit copy beside live 1080×1080 preview | Updated slides reflected in export |
+| **Export** | Download PDF/PNG or copy prompts | LinkedIn-ready carousel package |
+
+## Architecture
+
+```mermaid
+flowchart TB
+  subgraph Client["Frontend (React + Vite)"]
+    UI[5-step wizard UI]
+    Slide[CarouselSlide renderer]
+    Export[html2canvas + jsPDF + JSZip]
+    UI --> Slide
+    Slide --> Export
+  end
+
+  subgraph Skills["Vendored skills"]
+    BLC[blog-to-linkedin-carousel]
+    MKT[gtm-buddy-marketing-skills]
+    DES[gtm-buddy-design-engg]
+  end
+
+  subgraph API["carousel-api.js"]
+    Chain[Generation chain]
+    Pack[packageResult]
+    Chain --> Pack
+  end
+
+  subgraph Base44["Base44 cloud (production)"]
+    FN1[fetch-blog-content]
+    FN2[generate-carousel-slides]
+    LLM[InvokeLLM]
+    ENT[(CarouselProject entity)]
+    AGT[carousel_content_agent]
+    FN2 --> LLM
+  end
+
+  subgraph LocalDev["Local dev only"]
+    ViteLLM["/api/generate-carousel"]
+    Claude[Anthropic Claude API]
+    SkillEng[skill-content-engine heuristic]
+    ViteLLM --> Claude
+  end
+
+  subgraph Outputs["Design outputs"]
+    Figma[Figma Make prompt]
+    ClaudeOut[Claude / external prompt]
+    InApp[in-app design prompt]
+    PDF[PDF + PNG export]
+  end
+
+  UI --> API
+  BLC --> Chain
+  MKT --> Chain
+  DES --> Slide
+
+  Chain -->|configured| FN2
+  Chain -->|fallback| LLM
+  Chain -->|dev| ViteLLM
+  Chain -->|no AI key| SkillEng
+
+  Pack --> Figma
+  Pack --> ClaudeOut
+  Pack --> InApp
+  UI --> ENT
+  Export --> PDF
+```
+
+### Generation chain
+
+When you click **Generate carousel**, the app tries each path in order until one succeeds:
+
+```mermaid
+flowchart TD
+  Start([Generate carousel]) --> B44{Base44 configured?}
+
+  B44 -->|yes| Func[generate-carousel-slides function]
+  Func -->|success| Done([Package slides + prompts])
+  Func -->|404 / error| B44LLM[Base44 InvokeLLM]
+
+  B44 -->|no| LocalLLM[Local /api/generate-carousel]
+  B44LLM -->|success| Done
+  B44LLM -->|error| LocalLLM
+
+  LocalLLM -->|ANTHROPIC_API_KEY set| Claude[Claude Sonnet]
+  Claude -->|success| Done
+  LocalLLM -->|no key| Skill[skill-content-engine]
+
+  Skill --> Done
+
+  Done --> Save[Save CarouselProject]
+  Save --> Wizard[Continue to Review step]
+```
+
+### Repo layout
+
+```
+blog-carousel-studio/
+├── base44/
+│   ├── entities/carousel-project.jsonc
+│   ├── functions/
+│   │   ├── fetch-blog-content/
+│   │   └── generate-carousel-slides/
+│   └── agents/carousel_content_agent.jsonc
+├── src/
+│   ├── components/carousel/     # Slide renderer, preview, export, design panels
+│   ├── components/wizard/       # Input + review steps
+│   ├── lib/
+│   │   ├── carousel-api.js      # Generation chain + save
+│   │   ├── design-prompt.js     # Figma / Claude / in-app prompts
+│   │   ├── skill-content-engine.js
+│   │   └── skills/              # Vendored skill markdown
+│   └── pages/Home.jsx           # Wizard orchestration
+└── vite-plugin-llm-api.js       # Local Claude proxy (dev only)
+```
 
 ## Local development (Claude / AI)
 
@@ -19,6 +192,7 @@ Carousel copy requires **either** a local Claude key **or** Base44. Without eith
 ```bash
 npm install
 cp .env.example .env.local
+npm run check-setup
 ```
 
 Edit `.env.local`:
@@ -43,7 +217,7 @@ Get an Anthropic key: https://console.anthropic.com/settings/keys
 
 ## Base44 deployment (publish for team)
 
-1. Create a new app in the [Base44 dashboard](https://base44.com) and connect this GitHub repo (`Carousel-builder`).
+1. Create a new app in the [Base44 dashboard](https://base44.com) and connect this GitHub repo.
 2. Copy **App ID** and **App URL** into `.env.local` (see above).
 3. Deploy backend + frontend:
 
@@ -60,8 +234,6 @@ npx base44 deploy
 4. In Base44 dashboard: set **internal auth** (invite-only or `@gtmbuddy.ai` domain).
 5. On Base44, `generate-carousel-slides` uses **Base44 InvokeLLM** (platform AI — no Anthropic key needed in production).
 
-Generation order: Base44 function → Base44 LLM fallback → local Claude (dev only) → skill engine heuristic.
-
 Configure internal access in the Base44 dashboard (invite-only or email domain allowlist for `@gtmbuddy.ai`).
 
 ## Skill sync
@@ -74,9 +246,15 @@ chmod +x scripts/sync-skills.sh
 npx base44 agents push
 ```
 
-## Architecture
+## Components
 
-- **Entity**: `CarouselProject` — stores drafts and exports
-- **Functions**: `fetch-blog-content`, `generate-carousel-slides`
-- **Agent**: `carousel_content_agent` — orchestrates blog → carousel workflow
-- **Frontend**: 4-step wizard (Input → Review → Preview → Export)
+| Layer | Piece | Role |
+|-------|-------|------|
+| **Entity** | `CarouselProject` | Stores drafts, slides, prompts, export status |
+| **Functions** | `fetch-blog-content` | Fetches blog HTML from URL |
+| **Functions** | `generate-carousel-slides` | Runs skill prompt via InvokeLLM |
+| **Agent** | `carousel_content_agent` | Orchestrates blog → carousel workflow |
+| **Frontend** | 5-step wizard | Input → Review → Design → Preview → Export |
+| **Skills** | `blog-to-linkedin-carousel` | Slide structure, copy rules, Figma Make prompt |
+| **Skills** | `gtm-buddy-marketing-skills` | Content governance, LinkedIn patterns |
+| **Skills** | `gtm-buddy-design-engg` | GTM Buddy design tokens and themes |
