@@ -1,0 +1,160 @@
+{
+  "type": "object",
+  "name": "CarouselProject",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Project name"
+    },
+    "source_type": {
+      "type": "string",
+      "description": "How the blog content was provided",
+      "enum": [
+        "url",
+        "paste"
+      ]
+    },
+    "source_url": {
+      "type": "string",
+      "description": "Blog URL if source_type is url"
+    },
+    "source_text": {
+      "type": "string",
+      "description": "Raw blog content"
+    },
+    "slides": {
+      "type": "array",
+      "description": "Carousel slide content",
+      "items": {
+        "type": "object",
+        "properties": {
+          "index": {
+            "type": "number"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "hook",
+              "problem",
+              "insight",
+              "takeaway",
+              "cta"
+            ]
+          },
+          "eyebrow": {
+            "type": "string"
+          },
+          "headline": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "closing_line": {
+            "type": "string"
+          },
+          "footer": {
+            "type": "string"
+          },
+          "visual": {
+            "type": "string"
+          },
+          "footnote": {
+            "type": "string"
+          },
+          "cta": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "linkedin_caption": {
+      "type": "string",
+      "description": "Accompanying LinkedIn post copy"
+    },
+    "hashtags": {
+      "type": "array",
+      "description": "Suggested hashtags",
+      "items": {
+        "type": "string"
+      }
+    },
+    "status": {
+      "type": "string",
+      "description": "Workflow state",
+      "enum": [
+        "draft",
+        "ready",
+        "exported"
+      ],
+      "default": "draft"
+    },
+    "reference_urls": {
+      "type": "array",
+      "description": "Figma frame or reference image URLs (phase 2)",
+      "items": {
+        "type": "string"
+      }
+    },
+    "design_theme": {
+      "type": "string",
+      "description": "Carousel visual layout theme from design-engg",
+      "enum": [
+        "editorial",
+        "bold_hook",
+        "split_frame",
+        "minimal",
+        "framework",
+        "dark_strip"
+      ],
+      "default": "editorial"
+    },
+    "visual_archetype": {
+      "type": "string",
+      "description": "Visual archetype from blog-to-linkedin-carousel skill",
+      "enum": [
+        "editorial_memo",
+        "structured_diagram",
+        "comparison_brief",
+        "signal_architecture"
+      ],
+      "default": "editorial_memo"
+    },
+    "figma_make_prompt": {
+      "type": "string",
+      "description": "Ready-to-paste Figma Make design prompt"
+    },
+    "carousel_strategy": {
+      "type": "object",
+      "description": "Thesis, audience, source type, slide count rationale"
+    },
+    "cta_sentence": {
+      "type": "string",
+      "description": "CTA value sentence (skill CTA pair pattern)"
+    },
+    "cta_button": {
+      "type": "string",
+      "description": "CTA button label only"
+    }
+  },
+  "required": [
+    "title",
+    "source_type"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "id": "{{user.id}}"
+      }
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
