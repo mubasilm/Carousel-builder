@@ -10,6 +10,31 @@ function getAppIdFromPath() {
   return match?.[1] || null;
 }
 
+function getAppIdFromSubdomain() {
+  if (isNode) return null;
+  const match = window.location.hostname.match(/^([a-f0-9]{8,})\.base44\.app$/i);
+  return match?.[1] || null;
+}
+
+function getAppIdFromQuery() {
+  if (isNode) return null;
+  const params = new URLSearchParams(window.location.search);
+  return params.get("app_id") || params.get("appId") || null;
+}
+
+function getAppIdFromReferrer() {
+  if (isNode || !document.referrer) return null;
+  try {
+    const ref = new URL(document.referrer);
+    const pathMatch = ref.pathname.match(/\/apps\/([a-f0-9]{8,})/i);
+    if (pathMatch?.[1]) return pathMatch[1];
+    const hostMatch = ref.hostname.match(/^([a-f0-9]{8,})\.base44\.app$/i);
+    return hostMatch?.[1] || null;
+  } catch {
+    return null;
+  }
+}
+
 function getHostedAppBaseUrl() {
   if (isNode) return null;
   const { hostname, origin } = window.location;
@@ -22,6 +47,18 @@ export function isBase44Hosted() {
   if (isNode) return false;
   const { hostname } = window.location;
   return hostname.endsWith(".base44.app") || hostname === "app.base44.com";
+}
+
+export function resolveAppId() {
+  const envAppId = import.meta.env.VITE_BASE44_APP_ID;
+  return (
+    getAppIdFromQuery() ||
+    getAppIdFromPath() ||
+    getAppIdFromSubdomain() ||
+    getAppIdFromReferrer() ||
+    envAppId ||
+    null
+  );
 }
 
 const getAppParamValue = (paramName, { defaultValue = undefined, removeFromUrl = false } = {}) => {
@@ -54,13 +91,11 @@ const getAppParams = () => {
     storage.removeItem("token");
   }
 
-  const pathAppId = getAppIdFromPath();
   const hostedBaseUrl = getHostedAppBaseUrl();
-  const envAppId = import.meta.env.VITE_BASE44_APP_ID;
   const envBaseUrl = import.meta.env.VITE_BASE44_APP_BASE_URL;
 
   return {
-    appId: getAppParamValue("app_id", { defaultValue: pathAppId || envAppId }),
+    appId: getAppParamValue("app_id", { defaultValue: resolveAppId() }),
     token: getAppParamValue("access_token", { removeFromUrl: true }),
     fromUrl: getAppParamValue("from_url", { defaultValue: isNode ? "" : window.location.href }),
     functionsVersion: getAppParamValue("functions_version", {

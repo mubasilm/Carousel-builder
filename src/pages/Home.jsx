@@ -20,6 +20,7 @@ import {
 import { DESIGN_THEMES, THEME_IDS } from "@/lib/design-themes";
 import { formatApiError } from "@/lib/errors";
 import { getGenerationModeLabel } from "@/lib/setup-check";
+import { APP_BUILD } from "@/lib/build-info";
 import { useAuth } from "@/lib/AuthContext";
 
 const STEPS = [
@@ -253,6 +254,7 @@ export default function Home() {
           <div>
             <p className="text-xs font-bold uppercase tracking-widest text-green-accent">GTM Buddy Internal</p>
             <h1 className="text-xl font-bold text-text">Blog Carousel Studio</h1>
+            <p className="text-[10px] text-muted">build {APP_BUILD}</p>
           </div>
           <div className="flex items-center gap-3">
             {generationSource && (

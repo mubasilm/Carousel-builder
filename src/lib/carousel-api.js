@@ -11,24 +11,6 @@ import { generateCarouselLocally } from "@/lib/local-generate";
 import { BLOG_CAROUSEL_JSON_SCHEMA, BLOG_CAROUSEL_SKILL_INSTRUCTIONS } from "@/lib/prompts/blog-carousel-skill-prompt";
 import { canUseLocalLlm, getSetupStatus } from "@/lib/setup-check";
 
-function isApiError(error) {
-  const status = error?.status || error?.response?.status;
-  const msg = String(error?.message || "");
-  return status === 404 || status === 401 || status === 403 || status === 500 || msg.includes("404") || msg.includes("Network");
-}
-
-function isRecoverableAiError(error) {
-  const msg = String(error?.message || error?.data?.error || "");
-  return (
-    isApiError(error) ||
-    msg.includes("503") ||
-    msg.includes("No LLM API key") ||
-    msg.includes("Local LLM failed") ||
-    msg.includes("Function returned") ||
-    msg.includes("no slides")
-  );
-}
-
 function packageResult(result, blogText, title, referenceUrls = []) {
   const slides = normalizeSlides(result.slides || []);
   const visualArchetype = result.visual_archetype || inferArchetype(blogText);
@@ -71,8 +53,23 @@ function packageResult(result, blogText, title, referenceUrls = []) {
     carousel_strategy: carouselStrategy,
     cta_sentence: result.cta_sentence || "",
     cta_button: result.cta_button || "Read full blog",
-    _source: result._source || "llm",
+    _source: result._source || "local-skill",
+    _fallbackReason: result._fallbackReason || "",
   };
+}
+
+function buildSkillDraft({ blogText, title, referenceUrls, reason = "" }) {
+  const local = generateCarouselLocally({ blogText, title, referenceUrls });
+  return packageResult(
+    {
+      ...local,
+      _source: "local-skill",
+      _fallbackReason: reason,
+    },
+    blogText,
+    title,
+    referenceUrls,
+  );
 }
 
 async function generateViaLlm({ blogText, title, referenceUrls }) {
@@ -110,14 +107,38 @@ async function generateViaBase44Function({ blogText, title, referenceUrls }) {
     referenceUrls,
   });
 
-  if (!result?.success) {
-    throw new Error(result?.error || "Function returned unsuccessful response");
-  }
-  if (!result?.slides?.length) {
-    throw new Error("Function returned no slides");
+  if (!result?.success || !result?.slides?.length) {
+    throw new Error(result?.error || "Function returned no slides");
   }
 
   return packageResult({ ...result, _source: "function" }, blogText, title, referenceUrls);
+}
+
+async function tryAiGeneration({ blogText, title, referenceUrls }) {
+  const errors = [];
+
+  try {
+    return await generateViaLlm({ blogText, title, referenceUrls });
+  } catch (error) {
+    errors.push(error?.message || "InvokeLLM failed");
+  }
+
+  try {
+    return await generateViaBase44Function({ blogText, title, referenceUrls });
+  } catch (error) {
+    errors.push(error?.message || "Function failed");
+  }
+
+  if (canUseLocalLlm()) {
+    try {
+      const llmResult = await generateViaLocalLlm({ blogText, title, referenceUrls });
+      return packageResult(llmResult, blogText, title, referenceUrls);
+    } catch (error) {
+      errors.push(error?.message || "Local LLM failed");
+    }
+  }
+
+  return { error: errors.join("; ") };
 }
 
 export async function fetchBlogContent(url) {
@@ -128,10 +149,7 @@ export async function fetchBlogContent(url) {
   try {
     return await base44.functions.invoke("fetch-blog-content", { url });
   } catch (error) {
-    if (isApiError(error)) {
-      throw new Error("Blog fetch failed. Paste the content directly, or deploy: npx base44 functions deploy");
-    }
-    throw error;
+    throw new Error(error?.message || "Blog fetch failed. Paste the content directly.");
   }
 }
 
@@ -142,50 +160,32 @@ export async function generateCarouselSlides({ blogText, title, referenceUrls = 
   }
 
   const { isReady, isHosted } = getSetupStatus();
-  let aiError = null;
+  const skillDraft = buildSkillDraft({ blogText: cleanText, title, referenceUrls });
 
-  if (isReady) {
-    try {
-      return await generateViaBase44Function({ blogText: cleanText, title, referenceUrls });
-    } catch (error) {
-      aiError = error;
-      if (!isRecoverableAiError(error)) throw error;
-    }
-
-    try {
-      return await generateViaLlm({ blogText: cleanText, title, referenceUrls });
-    } catch (error) {
-      aiError = error;
-      if (!isRecoverableAiError(error)) throw error;
-    }
-  }
-
-  if (canUseLocalLlm()) {
-    try {
-      const llmResult = await generateViaLocalLlm({ blogText: cleanText, title, referenceUrls });
-      return packageResult(llmResult, cleanText, title, referenceUrls);
-    } catch (error) {
-      aiError = error;
-      if (!isRecoverableAiError(error)) throw error;
-    }
-  }
-
-  const local = generateCarouselLocally({ blogText: cleanText, title, referenceUrls });
-  const packaged = packageResult({ ...local, _source: "local-skill" }, cleanText, title, referenceUrls);
-
-  if (!packaged.slides.length) {
+  if (!skillDraft.slides.length) {
     throw new Error("Carousel generation failed. No slides were produced.");
   }
 
-  if (aiError && isReady) {
-    packaged._fallbackReason =
-      `Base44 AI unavailable (${aiError.message || "unknown error"}). Showing skill-engine draft — deploy functions with: npx base44 functions deploy`;
-  } else if (aiError && !isHosted) {
-    packaged._fallbackReason =
-      "No AI configured. Add ANTHROPIC_API_KEY to .env.local and restart dev server, or connect Base44 for InvokeLLM.";
+  if (!isReady) {
+    return {
+      ...skillDraft,
+      _fallbackReason: isHosted
+        ? ""
+        : "No AI configured. Add ANTHROPIC_API_KEY to .env.local or connect Base44 for full AI.",
+    };
   }
 
-  return packaged;
+  const aiResult = await tryAiGeneration({ blogText: cleanText, title, referenceUrls });
+  if (aiResult?.slides?.length) {
+    return aiResult;
+  }
+
+  return {
+    ...skillDraft,
+    _fallbackReason:
+      `AI unavailable (${aiResult?.error || "unknown"}). Showing skill-engine draft.` +
+      (isHosted ? " Deploy functions: npx base44 functions deploy" : ""),
+  };
 }
 
 export async function saveCarouselProject({ projectId, payload }) {
@@ -202,13 +202,10 @@ export async function saveCarouselProject({ projectId, payload }) {
       return await base44.entities.CarouselProject.update(projectId, payload);
     }
     return await base44.entities.CarouselProject.create(payload);
-  } catch (error) {
-    if (isApiError(error)) {
-      const key = "carousel_project_draft";
-      const saved = { ...payload, id: projectId || "local-draft", _localOnly: true };
-      localStorage.setItem(key, JSON.stringify(saved));
-      return saved;
-    }
-    throw error;
+  } catch {
+    const key = "carousel_project_draft";
+    const saved = { ...payload, id: projectId || "local-draft", _localOnly: true };
+    localStorage.setItem(key, JSON.stringify(saved));
+    return saved;
   }
 }

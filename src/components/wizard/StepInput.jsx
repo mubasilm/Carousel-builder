@@ -34,8 +34,7 @@ export default function StepInput({
       <div className="card-panel">
         <h2 className="text-xl font-bold text-text">Blog input</h2>
         <p className="mt-2 text-sm text-muted">
-          Paste blog content. The blog-to-linkedin-carousel skill compresses it into carousel-native copy (not a copy-paste).
-          Add <code className="text-xs">ANTHROPIC_API_KEY</code> to .env.local for full AI; otherwise the skill engine runs locally.
+          Paste blog content (100+ characters), then click Generate carousel. Skill engine always produces slides; Base44 AI upgrades copy when deployed.
         </p>
 
         <div className="mt-6 flex gap-2">
