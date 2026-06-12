@@ -273,11 +273,18 @@ npx base44 deploy             # rebuilds preview from latest main
 
 ## Skill sync
 
+Skills are vendored from [gtm-buddy-marketing-skills](https://github.com/GTM-Buddy-Marketing/gtm-buddy-marketing-skills) and applied in two layers:
+
+1. **LLM prompts** — distilled rules from `content-strategy`, `copywriting`, `copy-editing`, `product-marketing`, `ad-creative`, and `social` (see `src/lib/prompts/marketing-skills-prompt.js`)
+2. **Skill engine** — instant browser generation uses the same copy rules via `src/lib/copy-polish.js` and `src/lib/skill-content-engine.js`
+
 When you have local clones of the skill repos:
 
 ```bash
+git clone git@github.com:GTM-Buddy-Marketing/gtm-buddy-marketing-skills.git ../gtm-buddy-marketing-skills
 chmod +x scripts/sync-skills.sh
 ./scripts/sync-skills.sh
+npx base44 functions deploy
 npx base44 agents push
 ```
 

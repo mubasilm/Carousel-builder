@@ -16,7 +16,8 @@ export default function GenerationStatus() {
     modes.push({
       label: isHosted ? "Base44 AI (hosted)" : "Base44 AI",
       active: true,
-      detail: "generate-carousel-slides function → InvokeLLM fallback → skill engine",
+      detail:
+        "Marketing skills stack (content-strategy, copywriting, copy-editing, product-marketing, ad-creative, social) → function → InvokeLLM → skill engine",
     });
   }
   if (llm.available) {
@@ -30,7 +31,8 @@ export default function GenerationStatus() {
     modes.push({
       label: "Skill engine only",
       active: true,
-      detail: "Heuristic draft — add ANTHROPIC_API_KEY locally or open in Base44 for full AI",
+      detail:
+        "Marketing-skills heuristics (copywriting, ad-creative, social hooks) — add Base44 or ANTHROPIC_API_KEY for full AI",
     });
   }
 

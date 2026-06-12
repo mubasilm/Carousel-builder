@@ -1,9 +1,14 @@
 /**
  * Prompts distilled from blog-to-linkedin-carousel skill
- * Source: src/lib/skills/blog-to-linkedin-carousel/SKILL.md
+ * + gtm-buddy-marketing-skills (content-strategy, copywriting, copy-editing, product-marketing, ad-creative, social)
+ * Sources: src/lib/skills/blog-to-linkedin-carousel/SKILL.md, src/lib/skills/marketing/*.md
  */
 
+import { MARKETING_SKILLS_INSTRUCTIONS } from "@/lib/prompts/marketing-skills-prompt";
+
 export const BLOG_CAROUSEL_SKILL_INSTRUCTIONS = `You convert long-form GTM Buddy content into a LinkedIn carousel package.
+
+${MARKETING_SKILLS_INSTRUCTIONS}
 
 ## GTM Buddy rules (mandatory)
 - Revenue Activation category, not generic enablement or productivity framing

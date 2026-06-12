@@ -6,17 +6,46 @@ MARKETING="${MARKETING_SKILLS:-$ROOT/../gtm-buddy-marketing-skills}"
 DESIGN="${DESIGN_ENGG:-$ROOT/../gtm-buddy-design-engg}"
 
 BLOG_CAROUSEL="${BLOG_CAROUSEL_SKILL:-$ROOT/src/lib/skills/blog-to-linkedin-carousel}"
+DEST="$ROOT/src/lib/skills/marketing"
 
-mkdir -p "$ROOT/src/lib/skills/marketing" "$ROOT/src/lib/skills/design" "$ROOT/src/lib/skills/blog-to-linkedin-carousel"
+mkdir -p "$DEST" "$ROOT/src/lib/skills/design" "$ROOT/src/lib/skills/blog-to-linkedin-carousel"
+
+sync_skill() {
+  local src_dir="$1"
+  local dest_name="$2"
+  if [[ -f "$MARKETING/skills/$src_dir/SKILL.md" ]]; then
+    cp "$MARKETING/skills/$src_dir/SKILL.md" "$DEST/$dest_name"
+    echo "  synced $dest_name"
+  else
+    echo "  skip $dest_name (not found)"
+  fi
+}
 
 if [[ -d "$MARKETING" ]]; then
-  cp "$MARKETING/skills/social/SKILL.md" "$ROOT/src/lib/skills/marketing/social-skill.md"
-  cp "$MARKETING/skills/social/references/post-templates.md" "$ROOT/src/lib/skills/marketing/post-templates.md"
-  cp "$MARKETING/skills/social/references/platforms.md" "$ROOT/src/lib/skills/marketing/platforms.md"
-  cp "$MARKETING/.agents/content-governance.md" "$ROOT/src/lib/skills/marketing/content-governance.md"
+  echo "Syncing marketing skills from $MARKETING"
+  sync_skill "social" "social-skill.md"
+  sync_skill "content-strategy" "content-strategy-skill.md"
+  sync_skill "copywriting" "copywriting-skill.md"
+  sync_skill "copy-editing" "copy-editing-skill.md"
+  sync_skill "product-marketing" "product-marketing-skill.md"
+  sync_skill "ad-creative" "ad-creative-skill.md"
+
+  if [[ -f "$MARKETING/skills/social/references/post-templates.md" ]]; then
+    cp "$MARKETING/skills/social/references/post-templates.md" "$DEST/post-templates.md"
+  fi
+  if [[ -f "$MARKETING/skills/social/references/platforms.md" ]]; then
+    cp "$MARKETING/skills/social/references/platforms.md" "$DEST/platforms.md"
+  fi
+  if [[ -f "$MARKETING/.agents/content-governance.md" ]]; then
+    cp "$MARKETING/.agents/content-governance.md" "$DEST/content-governance.md"
+  fi
+  if [[ -f "$MARKETING/.agents/product-marketing-context.md" ]]; then
+    cp "$MARKETING/.agents/product-marketing-context.md" "$DEST/product-marketing-context.md"
+  fi
   echo "Synced marketing skills"
 else
   echo "Skip marketing: $MARKETING not found"
+  echo "Clone: git clone git@github.com:GTM-Buddy-Marketing/gtm-buddy-marketing-skills.git ../gtm-buddy-marketing-skills"
 fi
 
 if [[ -d "$DESIGN" ]]; then
