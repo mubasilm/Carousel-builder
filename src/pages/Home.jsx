@@ -1,17 +1,33 @@
 import { useCallback, useState } from "react";
-import { base44 } from "@/api/base44Client";
 import CarouselExportPanel from "@/components/carousel/CarouselExportPanel";
 import CarouselPreview from "@/components/carousel/CarouselPreview";
+import DesignOutputsPanel from "@/components/carousel/DesignOutputsPanel";
+import DesignThemePicker from "@/components/carousel/DesignThemePicker";
+import SetupBanner from "@/components/SetupBanner";
 import StepInput from "@/components/wizard/StepInput";
 import StepReview from "@/components/wizard/StepReview";
+import {
+  fetchBlogContent,
+  generateCarouselSlides,
+  saveCarouselProject,
+} from "@/lib/carousel-api";
 import { EMPTY_PROJECT, normalizeSlides } from "@/lib/carousel-schema";
+import {
+  ARCHETYPE_LABELS,
+  buildExternalDesignPrompt,
+  buildInAppDesignPrompt,
+} from "@/lib/design-prompt";
+import { DESIGN_THEMES, THEME_IDS } from "@/lib/design-themes";
+import { formatApiError } from "@/lib/errors";
+import { getGenerationModeLabel } from "@/lib/setup-check";
 import { useAuth } from "@/lib/AuthContext";
 
 const STEPS = [
   { id: 1, label: "Input" },
   { id: 2, label: "Review" },
-  { id: 3, label: "Preview" },
-  { id: 4, label: "Export" },
+  { id: 3, label: "Design" },
+  { id: 4, label: "Preview" },
+  { id: 5, label: "Export" },
 ];
 
 export default function Home() {
@@ -26,6 +42,16 @@ export default function Home() {
   const [slides, setSlides] = useState([]);
   const [linkedinCaption, setLinkedinCaption] = useState("");
   const [hashtags, setHashtags] = useState([]);
+  const [designTheme, setDesignTheme] = useState("editorial");
+  const [visualArchetype, setVisualArchetype] = useState("editorial_memo");
+  const [figmaMakePrompt, setFigmaMakePrompt] = useState("");
+  const [externalDesignPrompt, setExternalDesignPrompt] = useState("");
+  const [inAppDesignPrompt, setInAppDesignPrompt] = useState("");
+  const [carouselStrategy, setCarouselStrategy] = useState(null);
+  const [ctaSentence, setCtaSentence] = useState("");
+  const [ctaButton, setCtaButton] = useState("");
+  const [generationSource, setGenerationSource] = useState("");
+  const [generationNotice, setGenerationNotice] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [regeneratingIndex, setRegeneratingIndex] = useState(null);
@@ -42,20 +68,24 @@ export default function Home() {
         hashtags: updates.hashtags ?? hashtags,
         status: updates.status ?? project.status ?? "draft",
         reference_urls: referenceUrls.filter(Boolean),
+        design_theme: updates.design_theme ?? designTheme,
+        visual_archetype: updates.visual_archetype ?? visualArchetype,
+        figma_make_prompt: updates.figma_make_prompt ?? figmaMakePrompt,
+        external_design_prompt: updates.external_design_prompt ?? externalDesignPrompt,
+        in_app_design_prompt: updates.in_app_design_prompt ?? inAppDesignPrompt,
+        carousel_strategy: updates.carousel_strategy ?? carouselStrategy,
+        cta_sentence: updates.cta_sentence ?? ctaSentence,
+        cta_button: updates.cta_button ?? ctaButton,
       };
 
-      if (projectId) {
-        const updated = await base44.entities.CarouselProject.update(projectId, payload);
-        setProject(updated);
-        return updated;
+      const saved = await saveCarouselProject({ projectId, payload });
+      if (!projectId && saved.id) {
+        setProjectId(saved.id);
       }
-
-      const created = await base44.entities.CarouselProject.create(payload);
-      setProjectId(created.id);
-      setProject(created);
-      return created;
+      setProject(saved);
+      return saved;
     },
-    [project, projectId, sourceType, sourceUrl, sourceText, slides, linkedinCaption, hashtags, referenceUrls],
+    [project, projectId, sourceType, sourceUrl, sourceText, slides, linkedinCaption, hashtags, referenceUrls, designTheme, visualArchetype, figmaMakePrompt, externalDesignPrompt, inAppDesignPrompt, carouselStrategy, ctaSentence, ctaButton],
   );
 
   const handleGenerate = async () => {
@@ -70,7 +100,7 @@ export default function Home() {
         if (!sourceUrl.trim()) {
           throw new Error("Please enter a blog URL");
         }
-        const fetched = await base44.functions.invoke("fetch-blog-content", { url: sourceUrl.trim() });
+        const fetched = await fetchBlogContent(sourceUrl.trim());
         if (!fetched.success) {
           throw new Error(fetched.error || "Could not fetch blog content");
         }
@@ -81,32 +111,52 @@ export default function Home() {
         throw new Error("Please paste the blog content");
       }
 
-      const generated = await base44.functions.invoke("generate-carousel-slides", {
+      const generated = await generateCarouselSlides({
         blogText,
         title,
+        referenceUrls: referenceUrls.filter(Boolean),
       });
-
-      if (!generated.success) {
-        throw new Error(generated.error || "Failed to generate slides");
-      }
-
       const nextSlides = normalizeSlides(generated.slides);
+
       setSlides(nextSlides);
       setLinkedinCaption(generated.linkedin_caption || "");
       setHashtags(generated.hashtags || []);
-      setProject((p) => ({ ...p, title: generated.title || title }));
+      setDesignTheme(generated.design_theme || "editorial");
+      setVisualArchetype(generated.visual_archetype || "editorial_memo");
+      setFigmaMakePrompt(generated.figma_make_prompt || "");
+      setExternalDesignPrompt(generated.external_design_prompt || "");
+      setInAppDesignPrompt(generated.in_app_design_prompt || "");
+      setCarouselStrategy(generated.carousel_strategy || null);
+      setCtaSentence(generated.cta_sentence || "");
+      setCtaButton(generated.cta_button || "");
+      setGenerationSource(generated._source || "unknown");
+      setGenerationNotice(generated._fallbackReason || "");
+      setProject((p) => ({
+        ...p,
+        title: generated.title || title,
+        design_theme: generated.design_theme,
+        visual_archetype: generated.visual_archetype,
+      }));
 
       await saveProject({
         title: generated.title || title,
         slides: nextSlides,
         linkedin_caption: generated.linkedin_caption,
         hashtags: generated.hashtags,
+        design_theme: generated.design_theme,
+        visual_archetype: generated.visual_archetype,
+        figma_make_prompt: generated.figma_make_prompt,
+        external_design_prompt: generated.external_design_prompt,
+        in_app_design_prompt: generated.in_app_design_prompt,
+        carousel_strategy: generated.carousel_strategy,
+        cta_sentence: generated.cta_sentence,
+        cta_button: generated.cta_button,
         status: "draft",
       });
 
       setStep(2);
     } catch (err) {
-      setError(err.message || "Something went wrong");
+      setError(formatApiError(err));
     } finally {
       setLoading(false);
     }
@@ -117,30 +167,72 @@ export default function Home() {
     setError("");
     try {
       const context = `Regenerate only slide ${index + 1} for this carousel. Keep the same topic. Current slides: ${JSON.stringify(slides)}`;
-      const generated = await base44.functions.invoke("generate-carousel-slides", {
+      const generated = await generateCarouselSlides({
         blogText: `${sourceText}\n\n${context}`,
         title: project.title,
       });
-      if (generated.success && generated.slides?.[index]) {
+      if (generated.slides?.[index]) {
         const next = [...slides];
         next[index] = normalizeSlides([generated.slides[index]])[0];
         setSlides(next);
       }
     } catch (err) {
-      setError(err.message || "Failed to regenerate slide");
+      setError(formatApiError(err));
     } finally {
       setRegeneratingIndex(null);
     }
   };
 
+  const shuffleDesign = () => {
+    const others = THEME_IDS.filter((id) => id !== designTheme);
+    const next = others[Math.floor(Math.random() * others.length)];
+    setDesignTheme(next);
+    setProject((p) => ({ ...p, design_theme: next }));
+  };
+
   const handleNext = async () => {
     if (step === 2) {
-      await saveProject({ slides, linkedin_caption: linkedinCaption, hashtags, status: "ready" });
+      const promptOpts = {
+        title: project.title,
+        slides,
+        visualArchetype,
+        carouselStrategy: carouselStrategy || { thesis: project.title },
+        referenceUrls: referenceUrls.filter(Boolean),
+        themeId: designTheme,
+        ctaSentence,
+        ctaButton,
+      };
+      const refreshedFigma = buildExternalDesignPrompt({ ...promptOpts, target: "figma" });
+      const refreshedClaude = buildExternalDesignPrompt({ ...promptOpts, target: "claude" });
+      const refreshedInApp = buildInAppDesignPrompt(promptOpts);
+      setFigmaMakePrompt(refreshedFigma);
+      setExternalDesignPrompt(refreshedClaude);
+      setInAppDesignPrompt(refreshedInApp);
+      await saveProject({
+        slides,
+        linkedin_caption: linkedinCaption,
+        hashtags,
+        design_theme: designTheme,
+        figma_make_prompt: refreshedFigma,
+        external_design_prompt: refreshedClaude,
+        in_app_design_prompt: refreshedInApp,
+        status: "ready",
+      });
     }
     if (step === 3) {
+      await saveProject({
+        design_theme: designTheme,
+        visual_archetype: visualArchetype,
+        figma_make_prompt: figmaMakePrompt,
+        external_design_prompt: externalDesignPrompt,
+        in_app_design_prompt: inAppDesignPrompt,
+        status: "ready",
+      });
+    }
+    if (step === 4) {
       await saveProject({ status: "ready" });
     }
-    setStep((s) => Math.min(4, s + 1));
+    setStep((s) => Math.min(5, s + 1));
   };
 
   const handleExported = async () => {
@@ -149,20 +241,25 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-page">
-      <header
-        className="border-b border-border bg-page-soft"
-        style={{ borderColor: "var(--border)" }}
-      >
+      <SetupBanner />
+      <header className="border-b border-border bg-page-soft" style={{ borderColor: "var(--border)" }}>
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-widest text-green-accent">GTM Buddy Internal</p>
             <h1 className="text-xl font-bold text-text">Blog Carousel Studio</h1>
           </div>
           <div className="flex items-center gap-3">
+            {generationSource && (
+              <span className="rounded-full bg-green-soft px-2.5 py-1 text-xs font-medium text-green-800">
+                {getGenerationModeLabel(generationSource)}
+              </span>
+            )}
             {user?.email && <span className="text-sm text-muted">{user.email}</span>}
-            <button type="button" className="btn-secondary text-sm" onClick={() => logout()}>
-              Log out
-            </button>
+            {user && (
+              <button type="button" className="btn-secondary text-sm" onClick={() => logout()}>
+                Log out
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -203,6 +300,12 @@ export default function Home() {
           />
         )}
 
+        {generationNotice && step === 2 && (
+          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            {generationNotice}
+          </div>
+        )}
+
         {step === 2 && (
           <StepReview
             slides={slides}
@@ -216,12 +319,56 @@ export default function Home() {
           />
         )}
 
-        {step === 3 && <CarouselPreview slides={slides} />}
+        {step === 3 && (
+          <div className="space-y-6">
+            <DesignOutputsPanel
+              figmaMakePrompt={figmaMakePrompt}
+              externalDesignPrompt={externalDesignPrompt}
+              inAppDesignPrompt={inAppDesignPrompt}
+              visualArchetype={visualArchetype}
+              carouselStrategy={carouselStrategy}
+            />
+            <DesignThemePicker
+              themeId={designTheme}
+              onChange={setDesignTheme}
+              onShuffle={shuffleDesign}
+              visualArchetype={visualArchetype}
+            />
+            <div className="card-panel space-y-2">
+              <p className="text-sm text-muted">
+                Layout theme: <strong className="text-text">{DESIGN_THEMES[designTheme]?.label}</strong>
+              </p>
+              <p className="text-sm text-muted">
+                Visual archetype: <strong className="text-text">{ARCHETYPE_LABELS[visualArchetype] || visualArchetype}</strong>
+              </p>
+              {ctaSentence && (
+                <p className="text-sm text-muted">
+                  CTA pair: <em>{ctaSentence}</em> / <strong>{ctaButton}</strong>
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
         {step === 4 && (
-          <CarouselExportPanel
-            project={{ ...project, reference_urls: referenceUrls.filter(Boolean) }}
+          <CarouselPreview
             slides={slides}
+            setSlides={setSlides}
+            themeId={designTheme}
+            visualArchetype={visualArchetype}
+            ctaSentence={ctaSentence}
+            ctaButton={ctaButton}
+          />
+        )}
+
+        {step === 5 && (
+          <CarouselExportPanel
+            project={{ ...project, reference_urls: referenceUrls.filter(Boolean), design_theme: designTheme }}
+            slides={slides}
+            themeId={designTheme}
+            visualArchetype={visualArchetype}
+            ctaSentence={ctaSentence}
+            ctaButton={ctaButton}
             onExported={handleExported}
           />
         )}
@@ -232,7 +379,7 @@ export default function Home() {
           </div>
         )}
 
-        {step > 1 && step < 4 && (
+        {step > 1 && step < 5 && (
           <div className="mt-8 flex justify-between">
             <button type="button" className="btn-secondary" onClick={() => setStep((s) => s - 1)}>
               Back
@@ -248,9 +395,9 @@ export default function Home() {
           </div>
         )}
 
-        {step === 4 && (
+        {step === 5 && (
           <div className="mt-8">
-            <button type="button" className="btn-secondary" onClick={() => setStep(3)}>
+            <button type="button" className="btn-secondary" onClick={() => setStep(4)}>
               Back to preview
             </button>
           </div>

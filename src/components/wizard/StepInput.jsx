@@ -1,3 +1,5 @@
+import GenerationStatus from "@/components/GenerationStatus";
+
 export default function StepInput({
   sourceType,
   setSourceType,
@@ -27,10 +29,13 @@ export default function StepInput({
 
   return (
     <div className="space-y-6">
+      <GenerationStatus />
+
       <div className="card-panel">
         <h2 className="text-xl font-bold text-text">Blog input</h2>
         <p className="mt-2 text-sm text-muted">
-          Paste a blog URL or the full article text. We will generate LinkedIn carousel slide copy.
+          Paste blog content. The blog-to-linkedin-carousel skill compresses it into carousel-native copy (not a copy-paste).
+          Add <code className="text-xs">ANTHROPIC_API_KEY</code> to .env.local for full AI; otherwise the skill engine runs locally.
         </p>
 
         <div className="mt-6 flex gap-2">

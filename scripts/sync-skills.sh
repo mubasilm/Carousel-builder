@@ -1,34 +1,39 @@
 #!/usr/bin/env bash
-# Sync vendored skill content from local clones of the GTM Buddy skill repos.
-# Run after cloning:
-#   git clone git@github.com:GTM-Buddy-Marketing/gtm-buddy-marketing-skills.git ../gtm-buddy-marketing-skills
-#   git clone git@github.com:GTM-Buddy-Marketing/gtm-buddy-design-engg.git ../gtm-buddy-design-engg
-
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-MARKETING_SKILLS="${MARKETING_SKILLS:-$ROOT/../gtm-buddy-marketing-skills}"
-DESIGN_ENGG="${DESIGN_ENGG:-$ROOT/../gtm-buddy-design-engg}"
+MARKETING="${MARKETING_SKILLS:-$ROOT/../gtm-buddy-marketing-skills}"
+DESIGN="${DESIGN_ENGG:-$ROOT/../gtm-buddy-design-engg}"
 
-if [[ -d "$MARKETING_SKILLS" ]]; then
-  echo "Syncing marketing skills..."
-  find "$MARKETING_SKILLS" -name "*.md" -path "*carousel*" -o -name "*.md" -path "*linkedin*" 2>/dev/null | head -5 | while read -r f; do
-    cp "$f" "$ROOT/src/lib/prompts/" 2>/dev/null || true
-  done
-  if [[ -f "$MARKETING_SKILLS/skills/linkedin-content/SKILL.md" ]]; then
-    cp "$MARKETING_SKILLS/skills/linkedin-content/SKILL.md" "$ROOT/src/lib/prompts/linkedin-content-skill.md"
-  fi
+BLOG_CAROUSEL="${BLOG_CAROUSEL_SKILL:-$ROOT/src/lib/skills/blog-to-linkedin-carousel}"
+
+mkdir -p "$ROOT/src/lib/skills/marketing" "$ROOT/src/lib/skills/design" "$ROOT/src/lib/skills/blog-to-linkedin-carousel"
+
+if [[ -d "$MARKETING" ]]; then
+  cp "$MARKETING/skills/social/SKILL.md" "$ROOT/src/lib/skills/marketing/social-skill.md"
+  cp "$MARKETING/skills/social/references/post-templates.md" "$ROOT/src/lib/skills/marketing/post-templates.md"
+  cp "$MARKETING/skills/social/references/platforms.md" "$ROOT/src/lib/skills/marketing/platforms.md"
+  cp "$MARKETING/.agents/content-governance.md" "$ROOT/src/lib/skills/marketing/content-governance.md"
+  echo "Synced marketing skills"
 else
-  echo "Warning: marketing skills repo not found at $MARKETING_SKILLS"
+  echo "Skip marketing: $MARKETING not found"
 fi
 
-if [[ -d "$DESIGN_ENGG" ]]; then
-  echo "Syncing design tokens..."
-  if [[ -f "$DESIGN_ENGG/design.md" ]]; then
-    cp "$DESIGN_ENGG/design.md" "$ROOT/src/lib/design-tokens/design.md"
-  fi
+if [[ -d "$DESIGN" ]]; then
+  cp "$DESIGN/DESIGN.md" "$ROOT/src/lib/skills/design/DESIGN.md"
+  cp "$DESIGN/.agents/design-system.md" "$ROOT/src/lib/skills/design/design-system.md"
+  echo "Synced design-engg"
 else
-  echo "Warning: design-engg repo not found at $DESIGN_ENGG"
+  echo "Skip design: $DESIGN not found"
 fi
 
-echo "Done. Redeploy agents with: npx base44 agents push"
+if [[ -f "$BLOG_CAROUSEL/SKILL.md" ]]; then
+  echo "blog-to-linkedin-carousel skill present"
+elif [[ -f "${BLOG_CAROUSEL_SKILL_ZIP:-}" ]]; then
+  unzip -o "$BLOG_CAROUSEL_SKILL_ZIP" -d "$ROOT/src/lib/skills/blog-to-linkedin-carousel"
+  echo "Synced blog-to-linkedin-carousel from zip"
+else
+  echo "Skip blog carousel: vendored copy in src/lib/skills/blog-to-linkedin-carousel"
+fi
+
+echo "Done. Redeploy: npx base44 functions deploy && npx base44 agents push"

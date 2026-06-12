@@ -2,7 +2,15 @@ import { useRef, useState } from "react";
 import CarouselSlide from "./CarouselSlide";
 import { exportSlidesToPdf, exportSlidesToPngZip } from "@/lib/export-carousel";
 
-export default function CarouselExportPanel({ project, slides, onExported }) {
+export default function CarouselExportPanel({
+  project,
+  slides,
+  themeId,
+  visualArchetype = "editorial_memo",
+  ctaSentence = "",
+  ctaButton = "",
+  onExported,
+}) {
   const exportRef = useRef(null);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState("");
@@ -97,6 +105,10 @@ export default function CarouselExportPanel({ project, slides, onExported }) {
             slide={slide}
             slideIndex={i + 1}
             totalSlides={slides.length}
+            themeId={themeId}
+            visualArchetype={visualArchetype}
+            ctaSentence={ctaSentence}
+            ctaButton={ctaButton}
             forExport
           />
         ))}

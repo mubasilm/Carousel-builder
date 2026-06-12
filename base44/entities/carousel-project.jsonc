@@ -30,8 +30,12 @@
             "type": "string",
             "enum": ["hook", "problem", "insight", "takeaway", "cta"]
           },
+          "eyebrow": { "type": "string" },
           "headline": { "type": "string" },
           "body": { "type": "string" },
+          "closing_line": { "type": "string" },
+          "footer": { "type": "string" },
+          "visual": { "type": "string" },
           "footnote": { "type": "string" },
           "cta": { "type": "string" }
         }
@@ -56,6 +60,34 @@
       "type": "array",
       "items": { "type": "string" },
       "description": "Figma frame or reference image URLs (phase 2)"
+    },
+    "design_theme": {
+      "type": "string",
+      "enum": ["editorial", "bold_hook", "split_frame", "minimal", "framework", "dark_strip"],
+      "default": "editorial",
+      "description": "Carousel visual layout theme from design-engg"
+    },
+    "visual_archetype": {
+      "type": "string",
+      "enum": ["editorial_memo", "structured_diagram", "comparison_brief", "signal_architecture"],
+      "default": "editorial_memo",
+      "description": "Visual archetype from blog-to-linkedin-carousel skill"
+    },
+    "figma_make_prompt": {
+      "type": "string",
+      "description": "Ready-to-paste Figma Make design prompt"
+    },
+    "carousel_strategy": {
+      "type": "object",
+      "description": "Thesis, audience, source type, slide count rationale"
+    },
+    "cta_sentence": {
+      "type": "string",
+      "description": "CTA value sentence (skill CTA pair pattern)"
+    },
+    "cta_button": {
+      "type": "string",
+      "description": "CTA button label only"
     }
   },
   "required": ["title", "source_type"],

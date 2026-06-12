@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: "Authentication required" }, { status: 401 });
     }
 
-    const { blogText, title, file_urls } = await req.json();
+    const { blogText, title, file_urls, referenceUrls } = await req.json();
     if (!blogText || typeof blogText !== "string" || blogText.trim().length < 100) {
       return Response.json(
         { error: "Blog text must be at least 100 characters" },
@@ -17,13 +17,20 @@ Deno.serve(async (req) => {
       );
     }
 
+    const refBlock = referenceUrls?.length
+      ? `\nReference Figma frames:\n${referenceUrls.join("\n")}`
+      : "";
+
     const prompt = `${CAROUSEL_CONTENT_PROMPT}
+
+CRITICAL: Do NOT copy blog paragraphs into slides. Extract thesis and rewrite for LinkedIn carousel.
 
 Blog title: ${title || "Untitled"}
 Blog content:
 ${blogText.slice(0, 12000)}
+${refBlock}
 
-Generate the carousel JSON now.`;
+Generate the full carousel package JSON now.`;
 
     const result = await base44.integrations.Core.InvokeLLM({
       prompt,
@@ -34,9 +41,13 @@ Generate the carousel JSON now.`;
     const slides = (result.slides || []).map((slide: Record<string, unknown>, i: number) => ({
       index: slide.index ?? i + 1,
       type: slide.type || "insight",
+      eyebrow: slide.eyebrow || "",
       headline: slide.headline || "",
       body: slide.body || "",
-      footnote: slide.footnote || "",
+      closing_line: slide.closing_line || "",
+      footer: slide.footer || "",
+      visual: slide.visual || "",
+      footnote: slide.footnote || slide.closing_line || "",
       cta: slide.cta || "",
     }));
 
@@ -46,6 +57,13 @@ Generate the carousel JSON now.`;
       slides,
       linkedin_caption: result.linkedin_caption || "",
       hashtags: result.hashtags || [],
+      design_theme: result.design_theme || "editorial",
+      visual_archetype: result.visual_archetype || "editorial_memo",
+      figma_make_prompt: result.figma_make_prompt || "",
+      in_app_design_prompt: result.in_app_design_prompt || "",
+      carousel_strategy: result.carousel_strategy || null,
+      cta_sentence: result.cta_sentence || "",
+      cta_button: result.cta_button || "",
     });
   } catch (error) {
     return Response.json(

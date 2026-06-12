@@ -22,8 +22,12 @@ export default function StepReview({
       {
         index: slides.length + 1,
         type: "insight",
+        eyebrow: "",
         headline: "",
         body: "",
+        closing_line: "",
+        footer: "",
+        visual: "",
         footnote: "",
         cta: "",
       },
@@ -84,13 +88,23 @@ export default function StepReview({
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted">Headline</label>
+              <label className="mb-1 block text-xs font-medium text-muted">Eyebrow</label>
               <input
                 className="input-field"
-                value={slide.headline}
-                onChange={(e) => updateSlide(i, "headline", e.target.value)}
+                value={slide.eyebrow || ""}
+                onChange={(e) => updateSlide(i, "eyebrow", e.target.value)}
+                placeholder="Short label above headline"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted">Headline</label>
+            <input
+              className="input-field"
+              value={slide.headline}
+              onChange={(e) => updateSlide(i, "headline", e.target.value)}
+            />
           </div>
 
           <div>
@@ -99,6 +113,25 @@ export default function StepReview({
               className="input-field min-h-[80px] resize-y"
               value={slide.body}
               onChange={(e) => updateSlide(i, "body", e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted">Closing line</label>
+            <input
+              className="input-field"
+              value={slide.closing_line || ""}
+              onChange={(e) => updateSlide(i, "closing_line", e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted">Visual direction</label>
+            <textarea
+              className="input-field min-h-[60px] resize-y text-sm"
+              value={slide.visual || ""}
+              onChange={(e) => updateSlide(i, "visual", e.target.value)}
+              placeholder="Layout / diagram hint for Figma Make"
             />
           </div>
 
