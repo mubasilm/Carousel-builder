@@ -42,6 +42,17 @@ export default function StepReview({
     );
   };
 
+  if (!slides.length) {
+    return (
+      <div className="card-panel text-center">
+        <h2 className="text-xl font-bold text-text">No slides yet</h2>
+        <p className="mt-2 text-sm text-muted">
+          Go back to Input, paste at least 50 characters of blog content, and click Generate carousel.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="card-panel">

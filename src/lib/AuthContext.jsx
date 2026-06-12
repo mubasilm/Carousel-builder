@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { appParams } from "@/lib/app-params";
+import { appParams, isBase44Hosted } from "@/lib/app-params";
 import { createAxiosClient } from "@base44/sdk/dist/utils/axios-client";
 
 const AuthContext = createContext(null);
@@ -24,13 +24,25 @@ export function AuthProvider({ children }) {
       setIsAuthenticated(true);
     } catch {
       setIsAuthenticated(false);
-      setAuthError({ type: "auth_required", message: "Authentication required" });
+      if (!isBase44Hosted()) {
+        setAuthError({ type: "auth_required", message: "Authentication required" });
+      }
     } finally {
       setIsLoadingAuth(false);
     }
   };
 
   const checkAppState = async () => {
+    if (isBase44Hosted()) {
+      setAuthError(null);
+      setIsLoadingPublicSettings(false);
+      setIsLoadingAuth(false);
+      if (appParams.token) {
+        checkUserAuth();
+      }
+      return;
+    }
+
     try {
       setIsLoadingPublicSettings(true);
       setAuthError(null);

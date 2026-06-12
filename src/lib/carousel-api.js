@@ -11,6 +11,8 @@ import { generateCarouselLocally } from "@/lib/local-generate";
 import { BLOG_CAROUSEL_JSON_SCHEMA, BLOG_CAROUSEL_SKILL_INSTRUCTIONS } from "@/lib/prompts/blog-carousel-skill-prompt";
 import { canUseLocalLlm, getSetupStatus } from "@/lib/setup-check";
 
+const AI_TIMEOUT_MS = 8000;
+
 function packageResult(result, blogText, title, referenceUrls = []) {
   const slides = normalizeSlides(result.slides || []);
   const visualArchetype = result.visual_archetype || inferArchetype(blogText);
@@ -72,6 +74,15 @@ function buildSkillDraft({ blogText, title, referenceUrls, reason = "" }) {
   );
 }
 
+function withTimeout(promise, ms, label = "AI request") {
+  return Promise.race([
+    promise,
+    new Promise((resolve) => {
+      setTimeout(() => resolve({ error: `${label} timed out after ${ms / 1000}s` }), ms);
+    }),
+  ]);
+}
+
 async function generateViaLlm({ blogText, title, referenceUrls }) {
   const refBlock = referenceUrls?.length
     ? `\nReference Figma frames (use as visual reference in design prompt):\n${referenceUrls.join("\n")}`
@@ -117,17 +128,21 @@ async function generateViaBase44Function({ blogText, title, referenceUrls }) {
 async function tryAiGeneration({ blogText, title, referenceUrls }) {
   const errors = [];
 
-  try {
-    return await generateViaLlm({ blogText, title, referenceUrls });
-  } catch (error) {
-    errors.push(error?.message || "InvokeLLM failed");
-  }
+  const llmAttempt = await withTimeout(
+    generateViaLlm({ blogText, title, referenceUrls }),
+    AI_TIMEOUT_MS,
+    "InvokeLLM",
+  );
+  if (llmAttempt?.slides?.length) return llmAttempt;
+  errors.push(llmAttempt?.error || "InvokeLLM failed");
 
-  try {
-    return await generateViaBase44Function({ blogText, title, referenceUrls });
-  } catch (error) {
-    errors.push(error?.message || "Function failed");
-  }
+  const fnAttempt = await withTimeout(
+    generateViaBase44Function({ blogText, title, referenceUrls }),
+    AI_TIMEOUT_MS,
+    "generate-carousel-slides",
+  );
+  if (fnAttempt?.slides?.length) return fnAttempt;
+  errors.push(fnAttempt?.error || "Function failed");
 
   if (canUseLocalLlm()) {
     try {
@@ -139,6 +154,15 @@ async function tryAiGeneration({ blogText, title, referenceUrls }) {
   }
 
   return { error: errors.join("; ") };
+}
+
+/** Synchronous skill-only generation — always works in browser, no network. */
+export function generateCarouselSlidesSync({ blogText, title, referenceUrls = [] }) {
+  const cleanText = (blogText || "").trim();
+  if (cleanText.length < 50) {
+    throw new Error("Please provide at least 50 characters of blog content.");
+  }
+  return buildSkillDraft({ blogText: cleanText, title, referenceUrls });
 }
 
 export async function fetchBlogContent(url) {
@@ -155,23 +179,23 @@ export async function fetchBlogContent(url) {
 
 export async function generateCarouselSlides({ blogText, title, referenceUrls = [] }) {
   const cleanText = (blogText || "").trim();
-  if (cleanText.length < 100) {
-    throw new Error("Please provide at least 100 characters of blog content for carousel generation.");
+  if (cleanText.length < 50) {
+    throw new Error("Please provide at least 50 characters of blog content for carousel generation.");
   }
 
-  const { isReady, isHosted } = getSetupStatus();
   const skillDraft = buildSkillDraft({ blogText: cleanText, title, referenceUrls });
-
   if (!skillDraft.slides.length) {
     throw new Error("Carousel generation failed. No slides were produced.");
   }
+
+  const { isReady, isHosted } = getSetupStatus();
 
   if (!isReady) {
     return {
       ...skillDraft,
       _fallbackReason: isHosted
         ? ""
-        : "No AI configured. Add ANTHROPIC_API_KEY to .env.local or connect Base44 for full AI.",
+        : "Using skill engine. Add ANTHROPIC_API_KEY locally or deploy on Base44 for full AI.",
     };
   }
 
@@ -182,9 +206,7 @@ export async function generateCarouselSlides({ blogText, title, referenceUrls = 
 
   return {
     ...skillDraft,
-    _fallbackReason:
-      `AI unavailable (${aiResult?.error || "unknown"}). Showing skill-engine draft.` +
-      (isHosted ? " Deploy functions: npx base44 functions deploy" : ""),
+    _fallbackReason: `Using skill-engine copy (${aiResult?.error || "AI unavailable"}). Deploy: npx base44 functions deploy`,
   };
 }
 

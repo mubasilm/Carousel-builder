@@ -34,7 +34,7 @@ export default function StepInput({
       <div className="card-panel">
         <h2 className="text-xl font-bold text-text">Blog input</h2>
         <p className="mt-2 text-sm text-muted">
-          Paste blog content (100+ characters), then click Generate carousel. Skill engine always produces slides; Base44 AI upgrades copy when deployed.
+          Paste blog content (50+ characters), then click Generate carousel. Slides appear instantly; Base44 AI may upgrade copy in the background.
         </p>
 
         <div className="mt-6 flex gap-2">

@@ -1,12 +1,14 @@
 import { AuthProvider, useAuth } from "@/lib/AuthContext";
+import { isBase44Hosted } from "@/lib/app-params";
 import { getSetupStatus } from "@/lib/setup-check";
 import Home from "@/pages/Home";
 
 function AuthenticatedApp() {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
   const { isReady } = getSetupStatus();
+  const hosted = isBase44Hosted();
 
-  if (isReady && (isLoadingPublicSettings || isLoadingAuth)) {
+  if (!hosted && isReady && (isLoadingPublicSettings || isLoadingAuth)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-page">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-border border-t-green-accent" />
@@ -14,7 +16,7 @@ function AuthenticatedApp() {
     );
   }
 
-  if (isReady && authError?.type === "auth_required") {
+  if (!hosted && isReady && authError?.type === "auth_required") {
     navigateToLogin();
     return (
       <div className="flex min-h-screen items-center justify-center bg-page">
@@ -23,7 +25,7 @@ function AuthenticatedApp() {
     );
   }
 
-  if (isReady && authError?.type === "user_not_registered") {
+  if (!hosted && isReady && authError?.type === "user_not_registered") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-page px-6">
         <div className="card-panel max-w-md text-center">

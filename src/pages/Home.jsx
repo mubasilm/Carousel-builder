@@ -9,6 +9,7 @@ import StepReview from "@/components/wizard/StepReview";
 import {
   fetchBlogContent,
   generateCarouselSlides,
+  generateCarouselSlidesSync,
   saveCarouselProject,
 } from "@/lib/carousel-api";
 import { EMPTY_PROJECT, normalizeSlides } from "@/lib/carousel-schema";
@@ -110,9 +111,46 @@ export default function Home() {
         setSourceText(blogText);
       }
 
-      if (!blogText.trim() || blogText.trim().length < 100) {
-        throw new Error("Please paste at least 100 characters of blog content");
+      if (!blogText.trim() || blogText.trim().length < 50) {
+        throw new Error("Please paste at least 50 characters of blog content");
       }
+
+      // Instant skill-engine slides (no network) — guarantees content on Base44 preview
+      const instant = generateCarouselSlidesSync({
+        blogText,
+        title,
+        referenceUrls: referenceUrls.filter(Boolean),
+      });
+      const instantSlides = normalizeSlides(instant.slides);
+      setSlides(instantSlides);
+      setLinkedinCaption(instant.linkedin_caption || "");
+      setHashtags(instant.hashtags || []);
+      setDesignTheme(instant.design_theme || "editorial");
+      setVisualArchetype(instant.visual_archetype || "editorial_memo");
+      setFigmaMakePrompt(instant.figma_make_prompt || "");
+      setExternalDesignPrompt(instant.external_design_prompt || "");
+      setInAppDesignPrompt(instant.in_app_design_prompt || "");
+      setCarouselStrategy(instant.carousel_strategy || null);
+      setCtaSentence(instant.cta_sentence || "");
+      setCtaButton(instant.cta_button || "");
+      setGenerationSource("local-skill");
+      setStep(2);
+
+      await saveProject({
+        title: instant.title || title,
+        slides: instantSlides,
+        linkedin_caption: instant.linkedin_caption,
+        hashtags: instant.hashtags,
+        design_theme: instant.design_theme,
+        visual_archetype: instant.visual_archetype,
+        figma_make_prompt: instant.figma_make_prompt,
+        external_design_prompt: instant.external_design_prompt,
+        in_app_design_prompt: instant.in_app_design_prompt,
+        carousel_strategy: instant.carousel_strategy,
+        cta_sentence: instant.cta_sentence,
+        cta_button: instant.cta_button,
+        status: "draft",
+      });
 
       const generated = await generateCarouselSlides({
         blogText,
@@ -122,7 +160,7 @@ export default function Home() {
       const nextSlides = normalizeSlides(generated.slides);
 
       if (!nextSlides.length) {
-        throw new Error("Generation produced no slides. Paste more blog content or deploy Base44 functions.");
+        return;
       }
 
       setSlides(nextSlides);
@@ -160,8 +198,6 @@ export default function Home() {
         cta_button: generated.cta_button,
         status: "draft",
       });
-
-      setStep(2);
     } catch (err) {
       setError(formatApiError(err));
     } finally {
